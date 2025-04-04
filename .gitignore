@@ -1,0 +1,17 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large datasets (downloaded dynamically via torchvision)
+Datasets/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
