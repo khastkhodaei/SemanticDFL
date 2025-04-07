@@ -1,40 +1,221 @@
+"""
+Data Partitioning Algorithms for Federated and Decentralized Learning.
+
+Provides robust, reproducible IID and Non-IID partitioning strategies:
+1. DirichletPartitioner: Simulates label distribution skew via Dirichlet distribution Dir(alpha).
+2. PathologicalPartitioner: Strict class-quota (shard) partitioner where each client only observes K classes.
+3. IIDPartitioner: Uniform balanced random partitioning.
+"""
+
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Sequence, Dict, List
+from typing import Sequence
 import numpy as np
 import torch
 
+
 class BasePartitioner(ABC):
+    """Abstract base class for federated dataset partitioners."""
+
     @abstractmethod
-    def partition(self, targets: Sequence[int], num_clients: int) -> Dict[int, List[int]]:
+    def partition(
+        self,
+        targets: Sequence[int] | np.ndarray | torch.Tensor,
+        num_clients: int,
+    ) -> dict[int, list[int]]:
+        """
+        Partitions sample indices among num_clients.
+        
+        Args:
+            targets: Array-like sequence of target labels.
+            num_clients: Number of participating clients.
+            
+        Returns:
+            Dictionary mapping client_id (0..num_clients-1) to list of sample indices.
+        """
         pass
 
 
-class IIDPartitioner(BasePartitioner):
-    def __init__(self, seed: int | None = 42):
+class DirichletPartitioner(BasePartitioner):
+    """
+    Non-IID Dirichlet Partitioner.
+    
+    Generates class-imbalanced data distributions for each client by sampling from a
+    Dirichlet distribution with concentration parameter alpha:
+        p_{c} ~ Dir(alpha, ..., alpha)
+    where smaller alpha values produce more severe label heterogeneity.
+    """
+
+    def __init__(
+        self,
+        alpha: float = 0.5,
+        min_require_size: int = 1,
+        seed: int | None = 42,
+    ) -> None:
+        if alpha <= 0:
+            raise ValueError(f"Concentration parameter alpha must be positive, got {alpha}")
+        self.alpha = alpha
+        self.min_require_size = min_require_size
         self.seed = seed
-    def partition(self, targets: Sequence[int], num_clients: int) -> Dict[int, List[int]]:
-        n = len(targets)
-        indices = np.random.RandomState(self.seed).permutation(n)
+
+    def partition(
+        self,
+        targets: Sequence[int] | np.ndarray | torch.Tensor,
+        num_clients: int,
+    ) -> dict[int, list[int]]:
+        if num_clients <= 0:
+            raise ValueError(f"num_clients must be positive, got {num_clients}")
+
+        if isinstance(targets, torch.Tensor):
+            targets_np = targets.detach().cpu().numpy()
+        else:
+            targets_np = np.asarray(targets)
+
+        num_samples = len(targets_np)
+        unique_classes = np.unique(targets_np)
+        num_classes = len(unique_classes)
+
+        rng = np.random.default_rng(self.seed)
+
+        # Track indices per class
+        class_indices = {c: np.where(targets_np == c)[0] for c in unique_classes}
+        for c in unique_classes:
+            rng.shuffle(class_indices[c])
+
+        # If min_require_size * num_clients > num_samples, scale min_require_size down
+        effective_min_size = min(self.min_require_size, num_samples // num_clients)
+
+        client_indices: dict[int, list[int]] = {i: [] for i in range(num_clients)}
+        allocated = False
+        max_retries = 100
+        retry_count = 0
+
+        while not allocated and retry_count < max_retries:
+            retry_count += 1
+            temp_client_indices: dict[int, list[int]] = {i: [] for i in range(num_clients)}
+
+            for c in unique_classes:
+                idx_c = class_indices[c]
+                # Sample proportions from Dirichlet
+                proportions = rng.dirichlet(np.repeat(self.alpha, num_clients))
+                # Normalize and assign sample counts
+                counts = (proportions * len(idx_c)).astype(int)
+                remainder = len(idx_c) - counts.sum()
+                if remainder > 0:
+                    top_clients = np.argsort(-proportions)[:remainder]
+                    for cl in top_clients:
+                        counts[cl] += 1
+
+                # Split class indices according to counts
+                start = 0
+                for client_id, count in enumerate(counts):
+                    if count > 0:
+                        temp_client_indices[client_id].extend(idx_c[start : start + count])
+                        start += count
+
+            min_size = min(len(idxs) for idxs in temp_client_indices.values())
+            if min_size >= effective_min_size or retry_count == max_retries:
+                client_indices = temp_client_indices
+                allocated = True
+
+        # Shuffle each client's assigned sample indices
+        for i in range(num_clients):
+            rng.shuffle(client_indices[i])
+
+        return client_indices
+
+
+class PathologicalPartitioner(BasePartitioner):
+    """
+    Pathological Non-IID Partitioner (Class-Quota / Shard Splitting).
+    
+    Each client receives samples from only a restricted subset of classes (e.g. 2 classes).
+    Classic federated learning benchmark scenario from McMahan et al.
+    """
+
+    def __init__(
+        self,
+        classes_per_client: int = 2,
+        seed: int | None = 42,
+    ) -> None:
+        if classes_per_client <= 0:
+            raise ValueError(f"classes_per_client must be >= 1, got {classes_per_client}")
+        self.classes_per_client = classes_per_client
+        self.seed = seed
+
+    def partition(
+        self,
+        targets: Sequence[int] | np.ndarray | torch.Tensor,
+        num_clients: int,
+    ) -> dict[int, list[int]]:
+        if num_clients <= 0:
+            raise ValueError(f"num_clients must be positive, got {num_clients}")
+
+        if isinstance(targets, torch.Tensor):
+            targets_np = targets.detach().cpu().numpy()
+        else:
+            targets_np = np.asarray(targets)
+
+        unique_classes = np.unique(targets_np)
+        num_classes = len(unique_classes)
+        k = min(self.classes_per_client, num_classes)
+
+        rng = np.random.default_rng(self.seed)
+
+        # Sort indices by class
+        class_indices = {c: np.where(targets_np == c)[0] for c in unique_classes}
+        for c in unique_classes:
+            rng.shuffle(class_indices[c])
+
+        # Total shards needed = num_clients * k
+        total_shards = num_clients * k
+        shards_per_class = total_shards // num_classes
+        extra_shards = total_shards % num_classes
+
+        # Split each class into shards
+        all_shards: list[list[int]] = []
+        for i, c in enumerate(unique_classes):
+            n_shards = shards_per_class + (1 if i < extra_shards else 0)
+            if n_shards > 0:
+                splits = np.array_split(class_indices[c], n_shards)
+                for s in splits:
+                    all_shards.append(s.tolist())
+
+        # Shuffle shards and assign k shards per client
+        rng.shuffle(all_shards)
+        client_indices: dict[int, list[int]] = {i: [] for i in range(num_clients)}
+        for client_id in range(num_clients):
+            assigned = all_shards[client_id * k : (client_id + 1) * k]
+            for shard in assigned:
+                client_indices[client_id].extend(shard)
+            rng.shuffle(client_indices[client_id])
+
+        return client_indices
+
+
+class IIDPartitioner(BasePartitioner):
+    """
+    Uniform IID Partitioner.
+    
+    Evenly and uniformly distributes all dataset indices among clients at random.
+    """
+
+    def __init__(self, seed: int | None = 42) -> None:
+        self.seed = seed
+
+    def partition(
+        self,
+        targets: Sequence[int] | np.ndarray | torch.Tensor,
+        num_clients: int,
+    ) -> dict[int, list[int]]:
+        if num_clients <= 0:
+            raise ValueError(f"num_clients must be positive, got {num_clients}")
+
+        num_samples = len(targets)
+        rng = np.random.default_rng(self.seed)
+        indices = np.arange(num_samples)
+        rng.shuffle(indices)
+
         splits = np.array_split(indices, num_clients)
         return {i: splits[i].tolist() for i in range(num_clients)}
-
-
-class DirichletPartitioner(BasePartitioner):
-    def __init__(self, alpha: float = 0.5, seed: int | None = 42):
-        self.alpha = alpha
-        self.seed = seed
-    def partition(self, targets: Sequence[int], num_clients: int) -> Dict[int, List[int]]:
-        # Naive sampling without minimum sample guarantee
-        rng = np.random.RandomState(self.seed)
-        targets_arr = np.array(targets)
-        num_classes = len(np.unique(targets_arr))
-        client_indices = {i: [] for i in range(num_clients)}
-        for k in range(num_classes):
-            idx_k = np.where(targets_arr == k)[0]
-            proportions = rng.dirichlet(np.repeat(self.alpha, num_clients))
-            proportions = proportions / proportions.sum()
-            proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
-            client_splits = np.split(idx_k, proportions)
-            for i in range(num_clients):
-                client_indices[i].extend(client_splits[i].tolist())
-        return client_indices
