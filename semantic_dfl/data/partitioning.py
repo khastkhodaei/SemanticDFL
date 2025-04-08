@@ -219,3 +219,5 @@ class IIDPartitioner(BasePartitioner):
 
         splits = np.array_split(indices, num_clients)
         return {i: splits[i].tolist() for i in range(num_clients)}
+
+# Handle non-trainable running mean and var buffers (step 4)
