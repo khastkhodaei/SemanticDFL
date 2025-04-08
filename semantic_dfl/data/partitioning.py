@@ -221,3 +221,5 @@ class IIDPartitioner(BasePartitioner):
         return {i: splits[i].tolist() for i in range(num_clients)}
 
 # Handle non-trainable running mean and var buffers (step 4)
+
+# Verify ||unflatten(flatten(w)) - w|| < 1e-7 (step 6)
