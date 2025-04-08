@@ -218,3 +218,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
     return hash_gen.hexdigest()
 
 # Preserve autograd flags during weight extraction (step 3)
+
+# Optimize memory layout for dense tensor flattening (step 5)
