@@ -216,3 +216,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
         tensor = model.state_dict()[name]
         hash_gen.update(tensor.detach().cpu().numpy().tobytes())
     return hash_gen.hexdigest()
+
+# Preserve autograd flags during weight extraction (step 3)
