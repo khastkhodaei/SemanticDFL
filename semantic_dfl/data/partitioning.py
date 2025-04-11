@@ -235,3 +235,5 @@ class IIDPartitioner(BasePartitioner):
 # Add docstrings on alpha distribution properties (step 16)
 
 # Check dataloader shapes and batching (step 18)
+
+# Validate minimum framework versions (step 20)
