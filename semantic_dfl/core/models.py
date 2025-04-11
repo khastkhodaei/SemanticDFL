@@ -232,3 +232,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Support torch.Tensor input targets (step 15)
 
 # Build PyTorch DataLoader with pin_memory support (step 17)
+
+# Ensure reproducible batches with torch.manual_seed (step 19)
