@@ -245,3 +245,5 @@ class IIDPartitioner(BasePartitioner):
 # Verify ||unflatten(flatten(w)) - w|| < 1e-7 (step 26)
 
 # Generate unique deterministic fingerprint for synchronization (step 28)
+
+# Standardize type hints across model classes (step 30)
