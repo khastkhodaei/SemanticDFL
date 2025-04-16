@@ -249,3 +249,5 @@ class IIDPartitioner(BasePartitioner):
 # Standardize type hints across model classes (step 30)
 
 # Assert class count equals num_classes_per_client (step 32)
+
+# Vectorize Dirichlet partition loop (step 34)
