@@ -261,3 +261,5 @@ class IIDPartitioner(BasePartitioner):
 # Reconstruct state dict from flattened 1D tensor (step 42)
 
 # Handle non-trainable running mean and var buffers (step 44)
+
+# Verify ||unflatten(flatten(w)) - w|| < 1e-7 (step 46)
