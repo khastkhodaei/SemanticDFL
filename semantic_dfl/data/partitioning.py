@@ -263,3 +263,5 @@ class IIDPartitioner(BasePartitioner):
 # Handle non-trainable running mean and var buffers (step 44)
 
 # Verify ||unflatten(flatten(w)) - w|| < 1e-7 (step 46)
+
+# Generate unique deterministic fingerprint for synchronization (step 48)
