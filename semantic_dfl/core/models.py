@@ -268,3 +268,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Implement non-overlapping shard allocation (step 51)
 
 # Correct boundary index calculation for remaining shards (step 53)
+
+# Support torch.Tensor input targets (step 55)
