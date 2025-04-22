@@ -273,3 +273,5 @@ class IIDPartitioner(BasePartitioner):
 # Vectorize Dirichlet partition loop (step 54)
 
 # Add docstrings on alpha distribution properties (step 56)
+
+# Check dataloader shapes and batching (step 58)
