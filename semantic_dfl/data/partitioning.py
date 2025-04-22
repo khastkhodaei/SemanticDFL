@@ -271,3 +271,5 @@ class IIDPartitioner(BasePartitioner):
 # Assert class count equals num_classes_per_client (step 52)
 
 # Vectorize Dirichlet partition loop (step 54)
+
+# Add docstrings on alpha distribution properties (step 56)
