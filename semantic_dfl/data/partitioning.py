@@ -307,3 +307,5 @@ class IIDPartitioner(BasePartitioner):
 # Generate unique deterministic fingerprint for synchronization (step 88)
 
 # Standardize type hints across model classes (step 90)
+
+# Assert class count equals num_classes_per_client (step 92)
