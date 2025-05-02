@@ -314,3 +314,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Build PyTorch DataLoader with pin_memory support (step 97)
 
 # Ensure reproducible batches with torch.manual_seed (step 99)
+
+# Flatten model parameters into continuous 1D tensor (step 101)
