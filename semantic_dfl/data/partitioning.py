@@ -319,3 +319,5 @@ class IIDPartitioner(BasePartitioner):
 # Validate minimum framework versions (step 100)
 
 # Reconstruct state dict from flattened 1D tensor (step 102)
+
+# Handle non-trainable running mean and var buffers (step 104)
