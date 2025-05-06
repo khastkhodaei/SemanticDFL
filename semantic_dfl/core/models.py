@@ -330,3 +330,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Correct boundary index calculation for remaining shards (step 113)
 
 # Support torch.Tensor input targets (step 115)
+
+# Build PyTorch DataLoader with pin_memory support (step 117)
