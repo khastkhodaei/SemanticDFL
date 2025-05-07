@@ -338,3 +338,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Flatten model parameters into continuous 1D tensor (step 121)
 
 # Preserve autograd flags during weight extraction (step 123)
+
+# Optimize memory layout for dense tensor flattening (step 125)
