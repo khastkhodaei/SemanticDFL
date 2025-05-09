@@ -344,3 +344,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Extract continuous gradient vector for signature analysis (step 127)
 
 # Document parameter dimensions in docstrings (step 129)
+
+# Implement non-overlapping shard allocation (step 131)
