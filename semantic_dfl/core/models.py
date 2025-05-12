@@ -356,3 +356,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Ensure reproducible batches with torch.manual_seed (step 139)
 
 # Flatten model parameters into continuous 1D tensor (step 141)
+
+# Preserve autograd flags during weight extraction (step 143)
