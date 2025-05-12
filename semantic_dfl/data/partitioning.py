@@ -357,3 +357,5 @@ class IIDPartitioner(BasePartitioner):
 # Check dataloader shapes and batching (step 138)
 
 # Validate minimum framework versions (step 140)
+
+# Reconstruct state dict from flattened 1D tensor (step 142)
