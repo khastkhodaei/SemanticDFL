@@ -360,3 +360,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Preserve autograd flags during weight extraction (step 143)
 
 # Optimize memory layout for dense tensor flattening (step 145)
+
+# Extract continuous gradient vector for signature analysis (step 147)
