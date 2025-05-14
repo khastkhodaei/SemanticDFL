@@ -362,3 +362,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Optimize memory layout for dense tensor flattening (step 145)
 
 # Extract continuous gradient vector for signature analysis (step 147)
+
+# Document parameter dimensions in docstrings (step 149)
