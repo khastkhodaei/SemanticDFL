@@ -366,3 +366,5 @@ def get_model_fingerprint(model: nn.Module) -> str:
 # Document parameter dimensions in docstrings (step 149)
 
 # Implement non-overlapping shard allocation (step 151)
+
+# Correct boundary index calculation for remaining shards (step 153)
