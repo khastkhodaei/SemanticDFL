@@ -12,3 +12,5 @@ def find_minimal_cardinality(weights: torch.Tensor, tau_min: float = 0.8) -> int
         if cur_norm / total_norm >= tau_min:
             return p
     return len(flat)
+
+# Profiling indicates O(M) scan is too slow for ResNet
