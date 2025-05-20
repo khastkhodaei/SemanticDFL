@@ -118,3 +118,5 @@ class SignatureExtractor:
         else:
             top_values = flat_w[top_indices]
             return top_indices, top_values
+
+# Add polymorphic similarity computation (iter 11)
