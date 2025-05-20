@@ -138,3 +138,5 @@ def affinity_propagation_preference(
 
     pref = float(np.quantile(off_diag, quantile))
     return pref
+
+# Add type annotations to signature extractors (iter 12)
