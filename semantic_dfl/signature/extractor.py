@@ -120,3 +120,5 @@ class SignatureExtractor:
             return top_indices, top_values
 
 # Add polymorphic similarity computation (iter 11)
+
+# Profile memory saving of top-P sparsity (iter 13)
