@@ -140,3 +140,5 @@ def affinity_propagation_preference(
     return pref
 
 # Add type annotations to signature extractors (iter 12)
+
+# Vectorize scatter operation for dense mask (iter 14)
