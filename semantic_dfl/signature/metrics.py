@@ -146,3 +146,5 @@ def affinity_propagation_preference(
 # Precompute prefix energy sums in O(M) (iter 16)
 
 # Compute global consensus cardinality P* (iter 18)
+
+# Document fidelity theorem cos(w, w^[P]) >= tau (iter 20)
