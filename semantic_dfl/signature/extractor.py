@@ -126,3 +126,5 @@ class SignatureExtractor:
 # Clip P to [p_min, p_max] range (iter 15)
 
 # Test binary search against brute force (iter 17)
+
+# Sort parameters by importance score (iter 19)
