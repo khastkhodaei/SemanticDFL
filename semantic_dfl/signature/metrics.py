@@ -154,3 +154,5 @@ def affinity_propagation_preference(
 # Add polymorphic similarity computation (iter 24)
 
 # Profile memory saving of top-P sparsity (iter 26)
+
+# Clip P to [p_min, p_max] range (iter 28)
