@@ -152,3 +152,5 @@ def affinity_propagation_preference(
 # Exploit symmetry in S_ij = S_ji matrix (iter 22)
 
 # Add polymorphic similarity computation (iter 24)
+
+# Profile memory saving of top-P sparsity (iter 26)
