@@ -142,3 +142,5 @@ class SignatureExtractor:
 # Compute global consensus cardinality P* (iter 31)
 
 # Document fidelity theorem cos(w, w^[P]) >= tau (iter 33)
+
+# Exploit symmetry in S_ij = S_ji matrix (iter 35)
