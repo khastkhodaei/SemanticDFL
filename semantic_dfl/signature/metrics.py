@@ -168,3 +168,5 @@ def affinity_propagation_preference(
 # Add type annotations to signature extractors (iter 38)
 
 # Vectorize scatter operation for dense mask (iter 40)
+
+# Precompute prefix energy sums in O(M) (iter 42)
