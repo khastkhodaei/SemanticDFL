@@ -148,3 +148,5 @@ class SignatureExtractor:
 # Add polymorphic similarity computation (iter 37)
 
 # Profile memory saving of top-P sparsity (iter 39)
+
+# Clip P to [p_min, p_max] range (iter 41)
