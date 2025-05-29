@@ -156,3 +156,5 @@ class SignatureExtractor:
 # Sort parameters by importance score (iter 45)
 
 # Accumulate energy in float64 for numerical precision (iter 47)
+
+# Verify median similarity preference heuristic (iter 49)
