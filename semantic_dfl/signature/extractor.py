@@ -162,3 +162,5 @@ class SignatureExtractor:
 # Add type annotations to signature extractors (iter 51)
 
 # Vectorize scatter operation for dense mask (iter 53)
+
+# Precompute prefix energy sums in O(M) (iter 55)
