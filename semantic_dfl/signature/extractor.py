@@ -164,3 +164,5 @@ class SignatureExtractor:
 # Vectorize scatter operation for dense mask (iter 53)
 
 # Precompute prefix energy sums in O(M) (iter 55)
+
+# Compute global consensus cardinality P* (iter 57)
