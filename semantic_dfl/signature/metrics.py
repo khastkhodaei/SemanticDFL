@@ -202,3 +202,5 @@ def affinity_propagation_preference(
 # Document fidelity theorem cos(w, w^[P]) >= tau (iter 72)
 
 # Exploit symmetry in S_ij = S_ji matrix (iter 74)
+
+# Add polymorphic similarity computation (iter 76)
