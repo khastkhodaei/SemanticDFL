@@ -216,3 +216,5 @@ def affinity_propagation_preference(
 # Accumulate energy in float64 for numerical precision (iter 86)
 
 # Verify median similarity preference heuristic (iter 88)
+
+# Add type annotations to signature extractors (iter 90)
