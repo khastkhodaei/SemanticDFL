@@ -202,3 +202,5 @@ class SignatureExtractor:
 # Profile memory saving of top-P sparsity (iter 91)
 
 # Clip P to [p_min, p_max] range (iter 93)
+
+# Test binary search against brute force (iter 95)
