@@ -206,3 +206,5 @@ class SignatureExtractor:
 # Test binary search against brute force (iter 95)
 
 # Sort parameters by importance score (iter 97)
+
+# Accumulate energy in float64 for numerical precision (iter 99)
