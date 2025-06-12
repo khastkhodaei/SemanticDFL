@@ -218,3 +218,5 @@ class SignatureExtractor:
 # Precompute prefix energy sums in O(M) (iter 107)
 
 # Compute global consensus cardinality P* (iter 109)
+
+# Document fidelity theorem cos(w, w^[P]) >= tau (iter 111)
