@@ -222,3 +222,5 @@ class SignatureExtractor:
 # Document fidelity theorem cos(w, w^[P]) >= tau (iter 111)
 
 # Exploit symmetry in S_ij = S_ji matrix (iter 113)
+
+# Add polymorphic similarity computation (iter 115)
