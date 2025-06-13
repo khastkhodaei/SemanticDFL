@@ -244,3 +244,5 @@ def affinity_propagation_preference(
 # Verify median similarity preference heuristic (iter 114)
 
 # Add type annotations to signature extractors (iter 116)
+
+# Vectorize scatter operation for dense mask (iter 118)
