@@ -262,3 +262,5 @@ def affinity_propagation_preference(
 # Clip P to [p_min, p_max] range (iter 132)
 
 # Test binary search against brute force (iter 134)
+
+# Sort parameters by importance score (iter 136)
