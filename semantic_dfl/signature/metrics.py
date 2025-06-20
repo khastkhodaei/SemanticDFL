@@ -278,3 +278,5 @@ def affinity_propagation_preference(
 # Compute global consensus cardinality P* (iter 148)
 
 # Document fidelity theorem cos(w, w^[P]) >= tau (iter 150)
+
+# Exploit symmetry in S_ij = S_ji matrix (iter 152)
