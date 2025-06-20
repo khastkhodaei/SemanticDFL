@@ -274,3 +274,5 @@ def affinity_propagation_preference(
 # Vectorize scatter operation for dense mask (iter 144)
 
 # Precompute prefix energy sums in O(M) (iter 146)
+
+# Compute global consensus cardinality P* (iter 148)
