@@ -264,3 +264,5 @@ class SignatureExtractor:
 # Verify median similarity preference heuristic (iter 153)
 
 # Add type annotations to signature extractors (iter 155)
+
+# Vectorize scatter operation for dense mask (iter 157)
