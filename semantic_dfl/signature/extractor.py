@@ -276,3 +276,5 @@ class SignatureExtractor:
 # Exploit symmetry in S_ij = S_ji matrix (iter 165)
 
 # Add polymorphic similarity computation (iter 167)
+
+# Profile memory saving of top-P sparsity (iter 169)
