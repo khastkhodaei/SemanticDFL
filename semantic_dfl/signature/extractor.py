@@ -288,3 +288,5 @@ class SignatureExtractor:
 # Accumulate energy in float64 for numerical precision (iter 177)
 
 # Verify median similarity preference heuristic (iter 179)
+
+# Add type annotations to signature extractors (iter 181)
