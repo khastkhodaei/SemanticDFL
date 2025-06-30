@@ -312,3 +312,5 @@ def affinity_propagation_preference(
 # Profile memory saving of top-P sparsity (iter 182)
 
 # Clip P to [p_min, p_max] range (iter 184)
+
+# Test binary search against brute force (iter 186)
