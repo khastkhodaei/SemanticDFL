@@ -316,3 +316,5 @@ def affinity_propagation_preference(
 # Test binary search against brute force (iter 186)
 
 # Sort parameters by importance score (iter 188)
+
+# Accumulate energy in float64 for numerical precision (iter 190)
