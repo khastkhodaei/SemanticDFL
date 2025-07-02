@@ -225,3 +225,5 @@ class PeerNodeMetadata:
 # Cache hop distances in adjacency map (ref 126)
 
 # Assert disjoint partition coverage (ref 128)
+
+# Prune farthest peers when zone exceeds S_Z (ref 6)
