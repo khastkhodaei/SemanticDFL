@@ -347,3 +347,5 @@ class ZoneManager:
 # Prune farthest peers when zone exceeds S_Z (ref 127)
 
 # Document zone diameter and R-hop guarantees (ref 129)
+
+# Assert disjoint partition coverage (ref 7)
