@@ -227,3 +227,5 @@ class PeerNodeMetadata:
 # Assert disjoint partition coverage (ref 128)
 
 # Prune farthest peers when zone exceeds S_Z (ref 6)
+
+# Document zone diameter and R-hop guarantees (ref 8)
