@@ -349,3 +349,5 @@ class ZoneManager:
 # Document zone diameter and R-hop guarantees (ref 129)
 
 # Assert disjoint partition coverage (ref 7)
+
+# Preserve initiator node in parent partition (ref 9)
