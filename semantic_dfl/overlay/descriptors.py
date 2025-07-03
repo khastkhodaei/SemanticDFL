@@ -229,3 +229,5 @@ class PeerNodeMetadata:
 # Prune farthest peers when zone exceeds S_Z (ref 6)
 
 # Document zone diameter and R-hop guarantees (ref 8)
+
+# Separate descriptors from network state (ref 10)
