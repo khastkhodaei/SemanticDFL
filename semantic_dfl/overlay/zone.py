@@ -377,3 +377,5 @@ class ZoneManager:
 # Standardize typing across zone routines (ref 33)
 
 # Verify initiator election stability (ref 35)
+
+# Add secondary tie-breaking by node_id (ref 37)
