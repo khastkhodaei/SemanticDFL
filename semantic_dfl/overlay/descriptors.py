@@ -265,3 +265,5 @@ class PeerNodeMetadata:
 # Preserve initiator node in parent partition (ref 42)
 
 # Standardize typing across zone routines (ref 44)
+
+# Verify initiator election stability (ref 46)
