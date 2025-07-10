@@ -385,3 +385,5 @@ class ZoneManager:
 # Document zone diameter and R-hop guarantees (ref 41)
 
 # Separate descriptors from network state (ref 43)
+
+# Compute SHA256-based node priority hash (ref 45)
