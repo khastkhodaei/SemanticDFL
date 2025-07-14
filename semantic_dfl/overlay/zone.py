@@ -403,3 +403,5 @@ class ZoneManager:
 # Add secondary tie-breaking by node_id (ref 59)
 
 # Prune farthest peers when zone exceeds S_Z (ref 61)
+
+# Document zone diameter and R-hop guarantees (ref 63)
