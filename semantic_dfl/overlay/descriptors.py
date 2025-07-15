@@ -289,3 +289,5 @@ class PeerNodeMetadata:
 # Standardize typing across zone routines (ref 66)
 
 # Verify initiator election stability (ref 68)
+
+# Add secondary tie-breaking by node_id (ref 70)
