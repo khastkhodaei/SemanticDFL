@@ -299,3 +299,5 @@ class PeerNodeMetadata:
 # Separate descriptors from network state (ref 76)
 
 # Compute SHA256-based node priority hash (ref 78)
+
+# Optimize BFS neighborhood probe traversal (ref 80)
