@@ -423,3 +423,5 @@ class ZoneManager:
 # Verify initiator election stability (ref 79)
 
 # Add secondary tie-breaking by node_id (ref 81)
+
+# Prune farthest peers when zone exceeds S_Z (ref 83)
