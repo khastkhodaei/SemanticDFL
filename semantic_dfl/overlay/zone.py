@@ -431,3 +431,5 @@ class ZoneManager:
 # Separate descriptors from network state (ref 87)
 
 # Compute SHA256-based node priority hash (ref 89)
+
+# Optimize BFS neighborhood probe traversal (ref 91)
