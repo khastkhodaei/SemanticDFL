@@ -313,3 +313,5 @@ class PeerNodeMetadata:
 # Verify initiator election stability (ref 90)
 
 # Add secondary tie-breaking by node_id (ref 92)
+
+# Prune farthest peers when zone exceeds S_Z (ref 94)
