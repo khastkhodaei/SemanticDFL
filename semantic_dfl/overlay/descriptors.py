@@ -325,3 +325,5 @@ class PeerNodeMetadata:
 # Optimize BFS neighborhood probe traversal (ref 102)
 
 # Cache hop distances in adjacency map (ref 104)
+
+# Assert disjoint partition coverage (ref 106)
