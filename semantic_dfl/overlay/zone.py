@@ -443,3 +443,5 @@ class ZoneManager:
 # Standardize typing across zone routines (ref 99)
 
 # Verify initiator election stability (ref 101)
+
+# Add secondary tie-breaking by node_id (ref 103)
