@@ -323,3 +323,5 @@ class PeerNodeMetadata:
 # Compute SHA256-based node priority hash (ref 100)
 
 # Optimize BFS neighborhood probe traversal (ref 102)
+
+# Cache hop distances in adjacency map (ref 104)
