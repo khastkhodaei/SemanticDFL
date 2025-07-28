@@ -337,3 +337,5 @@ class PeerNodeMetadata:
 # Add secondary tie-breaking by node_id (ref 114)
 
 # Prune farthest peers when zone exceeds S_Z (ref 116)
+
+# Document zone diameter and R-hop guarantees (ref 118)
