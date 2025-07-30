@@ -349,3 +349,5 @@ class PeerNodeMetadata:
 # Cache hop distances in adjacency map (ref 126)
 
 # Assert disjoint partition coverage (ref 128)
+
+# Preserve initiator node in parent partition (ref 130)
