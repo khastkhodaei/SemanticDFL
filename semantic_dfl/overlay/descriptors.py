@@ -363,3 +363,5 @@ class PeerNodeMetadata:
 # Document zone diameter and R-hop guarantees (ref 140)
 
 # Separate descriptors from network state (ref 142)
+
+# Compute SHA256-based node priority hash (ref 144)
