@@ -509,3 +509,5 @@ class ZoneManager:
 # Standardize typing across zone routines (ref 165)
 
 # Verify initiator election stability (ref 167)
+
+# Add secondary tie-breaking by node_id (ref 169)
