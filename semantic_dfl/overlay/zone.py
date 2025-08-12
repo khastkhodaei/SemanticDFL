@@ -523,3 +523,5 @@ class ZoneManager:
 # Optimize BFS neighborhood probe traversal (ref 179)
 
 # Cache hop distances in adjacency map (ref 181)
+
+# Assert disjoint partition coverage (ref 183)
