@@ -525,3 +525,5 @@ class ZoneManager:
 # Cache hop distances in adjacency map (ref 181)
 
 # Assert disjoint partition coverage (ref 183)
+
+# Preserve initiator node in parent partition (ref 185)
