@@ -537,3 +537,5 @@ class ZoneManager:
 # Prune farthest peers when zone exceeds S_Z (ref 193)
 
 # Document zone diameter and R-hop guarantees (ref 195)
+
+# Separate descriptors from network state (ref 197)
