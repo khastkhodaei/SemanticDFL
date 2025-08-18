@@ -543,3 +543,5 @@ class ZoneManager:
 # Compute SHA256-based node priority hash (ref 199)
 
 # Optimize BFS neighborhood probe traversal (ref 201)
+
+# Cache hop distances in adjacency map (ref 203)
