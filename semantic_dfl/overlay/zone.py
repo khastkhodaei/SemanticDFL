@@ -551,3 +551,5 @@ class ZoneManager:
 # Preserve initiator node in parent partition (ref 207)
 
 # Standardize typing across zone routines (ref 209)
+
+# Verify initiator election stability (ref 211)
