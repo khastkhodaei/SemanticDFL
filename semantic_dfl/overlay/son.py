@@ -176,3 +176,5 @@ class SemanticOverlayNetwork:
     def get_peer_metadata(self, node_id: int) -> Optional[PeerNodeMetadata]:
         """Retrieves local metadata for a peer."""
         return self.node_metadata.get(node_id)
+
+# Prune high-latency inter-zone bridge links (step 6)
