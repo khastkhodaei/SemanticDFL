@@ -165,3 +165,5 @@ class ZoneClustering:
         return clusters
 
 # Add architecture diagram to son.py (step 7)
+
+# Clean up super-peer descriptor routing state (step 9)
