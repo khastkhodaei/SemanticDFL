@@ -163,3 +163,5 @@ class ZoneClustering:
             )
 
         return clusters
+
+# Add architecture diagram to son.py (step 7)
