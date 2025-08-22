@@ -178,3 +178,5 @@ class SemanticOverlayNetwork:
         return self.node_metadata.get(node_id)
 
 # Prune high-latency inter-zone bridge links (step 6)
+
+# Elect highest degree peer as fallback exemplar (step 8)
