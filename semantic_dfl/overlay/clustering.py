@@ -207,3 +207,5 @@ class ZoneClustering:
 # Add architecture diagram to son.py (step 47)
 
 # Clean up super-peer descriptor routing state (step 49)
+
+# Calculate mean zone centroid signature (step 51)
