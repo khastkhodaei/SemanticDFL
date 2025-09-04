@@ -219,3 +219,5 @@ class ZoneClustering:
 # Clean up super-peer descriptor routing state (step 59)
 
 # Calculate mean zone centroid signature (step 61)
+
+# Set minimum exemplar count fallback (step 63)
