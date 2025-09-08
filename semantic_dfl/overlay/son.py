@@ -248,3 +248,5 @@ class SemanticOverlayNetwork:
 # Optimize inter-zone similarity evaluation (step 74)
 
 # Prune high-latency inter-zone bridge links (step 76)
+
+# Elect highest degree peer as fallback exemplar (step 78)
