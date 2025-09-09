@@ -241,3 +241,5 @@ class ZoneClustering:
 # Calculate mean zone centroid signature (step 81)
 
 # Set minimum exemplar count fallback (step 83)
+
+# Test failover promotion on primary peer drop (step 85)
