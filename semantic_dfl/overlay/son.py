@@ -266,3 +266,5 @@ class SemanticOverlayNetwork:
 # L2-normalize centroid signatures (step 92)
 
 # Optimize inter-zone similarity evaluation (step 94)
+
+# Prune high-latency inter-zone bridge links (step 96)
