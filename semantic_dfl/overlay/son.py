@@ -262,3 +262,5 @@ class SemanticOverlayNetwork:
 # Elect highest degree peer as fallback exemplar (step 88)
 
 # Suppress sklearn non-convergence warning (step 90)
+
+# L2-normalize centroid signatures (step 92)
