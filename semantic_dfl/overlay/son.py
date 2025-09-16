@@ -290,3 +290,5 @@ class SemanticOverlayNetwork:
 # Prune high-latency inter-zone bridge links (step 116)
 
 # Elect highest degree peer as fallback exemplar (step 118)
+
+# Suppress sklearn non-convergence warning (step 120)
