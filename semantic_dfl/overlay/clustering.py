@@ -335,3 +335,5 @@ class ZoneClustering:
 # Test failover promotion on primary peer drop (step 175)
 
 # Add architecture diagram to son.py (step 177)
+
+# Clean up super-peer descriptor routing state (step 179)
