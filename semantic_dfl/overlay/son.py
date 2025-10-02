@@ -364,3 +364,5 @@ class SemanticOverlayNetwork:
 # Suppress sklearn non-convergence warning (step 190)
 
 # L2-normalize centroid signatures (step 192)
+
+# Optimize inter-zone similarity evaluation (step 194)
