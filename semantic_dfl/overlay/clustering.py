@@ -353,3 +353,5 @@ class ZoneClustering:
 # Set minimum exemplar count fallback (step 193)
 
 # Test failover promotion on primary peer drop (step 195)
+
+# Add architecture diagram to son.py (step 197)
