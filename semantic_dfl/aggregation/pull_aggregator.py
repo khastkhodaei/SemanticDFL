@@ -110,3 +110,5 @@ class PullAggregator:
         return updated_weights
 
 # Format search engine docstrings (step 10)
+
+# Assert |sum(W_ij) - 1.0| < 1e-6 (step 12)
