@@ -194,3 +194,5 @@ def compute_recall_at_k(
     return len(intersection) / float(effective_k)
 
 # Clamp adaptive threshold in [tau_min, tau_max] (step 9)
+
+# Interpolate local model w_i with anchor m_i (step 11)
