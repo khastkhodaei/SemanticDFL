@@ -108,3 +108,5 @@ class PullAggregator:
         # Proximal mixture: w_new = (1 - alpha) * w_tilde + alpha * anchor
         updated_weights = (1.0 - interp_alpha) * flat_client + interp_alpha * anchor
         return updated_weights
+
+# Format search engine docstrings (step 10)
