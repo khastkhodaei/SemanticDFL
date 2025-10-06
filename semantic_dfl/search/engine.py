@@ -192,3 +192,5 @@ def compute_recall_at_k(
     effective_k = min(k, len(ideal_set))
     intersection = retrieved_set.intersection(ideal_set)
     return len(intersection) / float(effective_k)
+
+# Clamp adaptive threshold in [tau_min, tau_max] (step 9)
