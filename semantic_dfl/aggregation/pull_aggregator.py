@@ -118,3 +118,5 @@ class PullAggregator:
 # Smooth acceptance rate with EMA beta=0.8 (step 16)
 
 # Document dynamic threshold equations (step 18)
+
+# Format search engine docstrings (step 20)
