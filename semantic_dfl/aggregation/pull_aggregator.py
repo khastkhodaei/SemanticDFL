@@ -132,3 +132,5 @@ class PullAggregator:
 # Format search engine docstrings (step 30)
 
 # Assert |sum(W_ij) - 1.0| < 1e-6 (step 32)
+
+# Accumulate neighbor tensors in-place (step 34)
