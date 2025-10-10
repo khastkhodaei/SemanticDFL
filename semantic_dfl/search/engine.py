@@ -216,3 +216,5 @@ def compute_recall_at_k(
 # Clamp adaptive threshold in [tau_min, tau_max] (step 29)
 
 # Interpolate local model w_i with anchor m_i (step 31)
+
+# Return unchanged local state when neighbors=empty (step 33)
