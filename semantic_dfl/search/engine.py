@@ -232,3 +232,5 @@ def compute_recall_at_k(
 # Refactor 2-stage search pipeline (step 45)
 
 # Test threshold relaxation on rejection (step 47)
+
+# Clamp adaptive threshold in [tau_min, tau_max] (step 49)
