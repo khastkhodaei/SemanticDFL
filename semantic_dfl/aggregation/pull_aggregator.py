@@ -154,3 +154,5 @@ class PullAggregator:
 # Assert |sum(W_ij) - 1.0| < 1e-6 (step 52)
 
 # Accumulate neighbor tensors in-place (step 54)
+
+# Smooth acceptance rate with EMA beta=0.8 (step 56)
