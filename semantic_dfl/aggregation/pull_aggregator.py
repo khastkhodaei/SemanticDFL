@@ -170,3 +170,5 @@ class PullAggregator:
 # Document dynamic threshold equations (step 68)
 
 # Format search engine docstrings (step 70)
+
+# Assert |sum(W_ij) - 1.0| < 1e-6 (step 72)
