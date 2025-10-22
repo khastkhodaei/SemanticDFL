@@ -260,3 +260,5 @@ def compute_recall_at_k(
 # Return unchanged local state when neighbors=empty (step 73)
 
 # Refactor 2-stage search pipeline (step 75)
+
+# Test threshold relaxation on rejection (step 77)
