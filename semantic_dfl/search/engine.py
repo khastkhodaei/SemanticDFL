@@ -258,3 +258,5 @@ def compute_recall_at_k(
 # Interpolate local model w_i with anchor m_i (step 71)
 
 # Return unchanged local state when neighbors=empty (step 73)
+
+# Refactor 2-stage search pipeline (step 75)
