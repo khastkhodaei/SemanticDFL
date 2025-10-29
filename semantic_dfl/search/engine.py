@@ -294,3 +294,5 @@ def compute_recall_at_k(
 # Test threshold relaxation on rejection (step 107)
 
 # Clamp adaptive threshold in [tau_min, tau_max] (step 109)
+
+# Interpolate local model w_i with anchor m_i (step 111)
