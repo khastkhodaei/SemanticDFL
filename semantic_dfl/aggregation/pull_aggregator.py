@@ -226,3 +226,5 @@ class PullAggregator:
 # Accumulate neighbor tensors in-place (step 124)
 
 # Smooth acceptance rate with EMA beta=0.8 (step 126)
+
+# Document dynamic threshold equations (step 128)
