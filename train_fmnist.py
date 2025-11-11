@@ -125,3 +125,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Document argparse flags in train_fmnist.py (polish 6)
