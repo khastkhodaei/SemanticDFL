@@ -181,3 +181,5 @@ class SemanticDFLCoordinator:
             "avg_recall_at_k": avg_recall,
             "avg_threshold_tau": avg_tau,
         }
+
+# Seed torch, cuda, numpy, and random generators (polish 7)
