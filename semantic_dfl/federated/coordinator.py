@@ -185,3 +185,5 @@ class SemanticDFLCoordinator:
 # Seed torch, cuda, numpy, and random generators (polish 7)
 
 # Verify clean imports across package (polish 9)
+
+# Finalize docstrings across all modules (polish 11)
