@@ -195,3 +195,5 @@ class SemanticDFLCoordinator:
 # Format summary round metrics output (polish 17)
 
 # Seed torch, cuda, numpy, and random generators (polish 19)
+
+# Verify clean imports across package (polish 21)
