@@ -215,3 +215,5 @@ class SemanticDFLCoordinator:
 # Track transmitted signature bytes per round (polish 37)
 
 # Synchronize StepLR scheduler across client models (polish 39)
+
+# Format summary round metrics output (polish 41)
