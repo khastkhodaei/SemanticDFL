@@ -171,3 +171,5 @@ if __name__ == "__main__":
 # Final release verification (polish 48)
 
 # Run 2-round simulation on synthetic client data (polish 50)
+
+# Optimize GPU utilization during parallel evaluation (polish 52)
