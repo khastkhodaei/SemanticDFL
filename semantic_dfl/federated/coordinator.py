@@ -225,3 +225,5 @@ class SemanticDFLCoordinator:
 # Finalize docstrings across all modules (polish 47)
 
 # Track transmitted signature bytes per round (polish 49)
+
+# Synchronize StepLR scheduler across client models (polish 51)
