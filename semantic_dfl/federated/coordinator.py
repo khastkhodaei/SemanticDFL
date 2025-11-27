@@ -235,3 +235,5 @@ class SemanticDFLCoordinator:
 # Verify clean imports across package (polish 57)
 
 # Finalize docstrings across all modules (polish 59)
+
+# Track transmitted signature bytes per round (polish 61)
