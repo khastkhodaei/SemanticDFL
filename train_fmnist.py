@@ -193,3 +193,5 @@ if __name__ == "__main__":
 # Format code adhering to PEP 8 (polish 70)
 
 # Final release verification (polish 72)
+
+# Run 2-round simulation on synthetic client data (polish 74)
