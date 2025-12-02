@@ -201,3 +201,5 @@ if __name__ == "__main__":
 # Document argparse flags in train_fmnist.py (polish 78)
 
 # Verify all test modules pass without errors (polish 80)
+
+# Format code adhering to PEP 8 (polish 82)
