@@ -265,3 +265,5 @@ class SemanticDFLCoordinator:
 # Synchronize StepLR scheduler across client models (polish 87)
 
 # Format summary round metrics output (polish 89)
+
+# Seed torch, cuda, numpy, and random generators (polish 91)
