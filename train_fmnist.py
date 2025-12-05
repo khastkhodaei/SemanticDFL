@@ -221,3 +221,5 @@ if __name__ == "__main__":
 # Run 2-round simulation on synthetic client data (polish 98)
 
 # Optimize GPU utilization during parallel evaluation (polish 100)
+
+# Document argparse flags in train_fmnist.py (polish 102)
