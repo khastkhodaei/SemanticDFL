@@ -1,0 +1,132 @@
+version: "3.8"
+
+networks:
+  slices_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+services:
+  bootstrap-superpeer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dfl-bootstrap-superpeer
+    hostname: bootstrap-superpeer
+    networks:
+      slices_net:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "50050:50050"
+    command: >
+      --node_id 0
+      --host 0.0.0.0
+      --port 50050
+      --is_super_peer
+      --rounds 10
+      --config configs/default_config.yaml
+    volumes:
+      - ./results:/app/results
+      - ./Datasets:/app/Datasets
+    restart: unless-stopped
+
+  peer-node-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dfl-peer-1
+    hostname: peer-1
+    networks:
+      slices_net:
+        ipv4_address: 172.28.0.11
+    ports:
+      - "50051:50051"
+    depends_on:
+      - bootstrap-superpeer
+    command: >
+      --node_id 1
+      --host 0.0.0.0
+      --port 50051
+      --bootstrap bootstrap-superpeer:50050
+      --rounds 10
+      --config configs/default_config.yaml
+    volumes:
+      - ./results:/app/results
+      - ./Datasets:/app/Datasets
+    restart: on-failure
+
+  peer-node-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dfl-peer-2
+    hostname: peer-2
+    networks:
+      slices_net:
+        ipv4_address: 172.28.0.12
+    ports:
+      - "50052:50052"
+    depends_on:
+      - bootstrap-superpeer
+    command: >
+      --node_id 2
+      --host 0.0.0.0
+      --port 50052
+      --bootstrap bootstrap-superpeer:50050
+      --rounds 10
+      --config configs/default_config.yaml
+    volumes:
+      - ./results:/app/results
+      - ./Datasets:/app/Datasets
+    restart: on-failure
+
+  peer-node-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dfl-peer-3
+    hostname: peer-3
+    networks:
+      slices_net:
+        ipv4_address: 172.28.0.13
+    ports:
+      - "50053:50053"
+    depends_on:
+      - bootstrap-superpeer
+    command: >
+      --node_id 3
+      --host 0.0.0.0
+      --port 50053
+      --bootstrap bootstrap-superpeer:50050
+      --rounds 10
+      --config configs/default_config.yaml
+    volumes:
+      - ./results:/app/results
+      - ./Datasets:/app/Datasets
+    restart: on-failure
+
+  peer-node-4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dfl-peer-4
+    hostname: peer-4
+    networks:
+      slices_net:
+        ipv4_address: 172.28.0.14
+    ports:
+      - "50054:50054"
+    depends_on:
+      - bootstrap-superpeer
+    command: >
+      --node_id 4
+      --host 0.0.0.0
+      --port 50054
+      --bootstrap bootstrap-superpeer:50050
+      --rounds 10
+      --config configs/default_config.yaml
+    volumes:
+      - ./results:/app/results
+      - ./Datasets:/app/Datasets
+    restart: on-failure

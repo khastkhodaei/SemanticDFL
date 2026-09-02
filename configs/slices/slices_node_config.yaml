@@ -1,0 +1,34 @@
+simulation:
+  rounds: 20
+  seed: 42
+  device: "auto"
+
+federated:
+  num_clients: 5
+  k_neighbors: 2
+  zone_size: 3
+  alpha_personalization: 0.67
+
+data:
+  dataset: "fmnist"
+  partitioner: "dirichlet"
+  alpha: 0.3
+  batch_size: 32
+  data_dir: "./Datasets"
+
+model:
+  architecture: "FashionCNN"
+  local_epochs: 1
+  learning_rate: 0.01
+
+transport:
+  backend: "grpc"
+  max_workers: 10
+  timeout_seconds: 15.0
+  keepalive_time_ms: 10000
+
+logging:
+  save_results_json: true
+  detailed_client_metrics: true
+  generate_plots: true
+  output_dir: "results/slices"

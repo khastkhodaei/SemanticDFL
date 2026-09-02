@@ -15,11 +15,12 @@ from torch.utils.data import DataLoader
 from semantic_dfl.core.models import get_flattened_params, set_flattened_params
 from semantic_dfl.search.controller import AdaptiveThresholdController
 from semantic_dfl.signature.extractor import SignatureExtractor
+from semantic_dfl.transport.interface import ITransport
 
 
 class DFLClient:
     """
-    Simulated autonomous peer in the SemanticDFL network.
+    Simulated or networked autonomous peer in the SemanticDFL network.
     """
 
     def __init__(
@@ -37,6 +38,7 @@ class DFLClient:
         eta_tau: float = 0.05,
         gamma: float = 0.02,
         device: Optional[torch.device] = None,
+        transport: Optional[ITransport] = None,
     ) -> None:
         self.node_id = node_id
         self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
@@ -45,6 +47,7 @@ class DFLClient:
         self.test_loader = test_loader
         self.criterion = criterion or nn.CrossEntropyLoss()
         self.optimizer = optimizer or torch.optim.SGD(self.model.parameters(), lr=lr, momentum=0.9)
+        self.transport = transport
 
         # Local Adaptive Modules
         self.signature_extractor = SignatureExtractor(beta=beta)
@@ -57,13 +60,16 @@ class DFLClient:
 
         self.last_signature: Optional[torch.Tensor] = None
 
+
     def get_weights(self) -> torch.Tensor:
         """Extracts flat 1D parameter vector from local model."""
         return get_flattened_params(self.model)
 
-    def set_weights(self, flat_params: torch.Tensor) -> None:
-        """Sets flat 1D parameter vector into local model."""
+    def set_weights(self, flat_params: torch.Tensor, round_num: int = 0) -> None:
+        """Sets flat 1D parameter vector into local model and syncs with transport."""
         set_flattened_params(self.model, flat_params.to(self.device))
+        if self.transport is not None:
+            self.transport.set_local_weights(flat_params, round_num=round_num)
 
     def train_epoch(self, epochs: int = 1) -> float:
         """
@@ -93,12 +99,13 @@ class DFLClient:
 
         return total_loss / max(1, total_samples)
 
-    def extract_signature(self, p: int) -> torch.Tensor:
+    def extract_signature(self, p: int, round_num: int = 0) -> torch.Tensor:
         """
         Extracts the top-P sparsified signature vector u_i based on EMA importance scores.
         
         Args:
             p: Cardinality budget.
+            round_num: Current communication round.
             
         Returns:
             1D masked signature tensor u_i in R^M.
@@ -110,7 +117,10 @@ class DFLClient:
             p=p,
             return_dense_masked=True,
         )
+        if self.transport is not None:
+            self.transport.set_local_signature(self.last_signature, round_num=round_num, cardinality_p=p)
         return self.last_signature
+
 
     def evaluate(self, dataloader: Optional[DataLoader] = None) -> Tuple[float, float]:
         """

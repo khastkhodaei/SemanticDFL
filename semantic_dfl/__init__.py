@@ -50,6 +50,10 @@ from semantic_dfl.search.engine import (
 from semantic_dfl.aggregation.pull_aggregator import PullAggregator
 from semantic_dfl.federated.client import DFLClient
 from semantic_dfl.federated.coordinator import SemanticDFLCoordinator
+from semantic_dfl.transport.interface import ITransport, PeerEndpoint
+from semantic_dfl.transport.memory_transport import MemoryTransport
+from semantic_dfl.transport.grpc_transport import GRPCTransport, TensorSerializer
+from semantic_dfl.visualization.plotter import generate_all_plots, load_run_data
 
 __version__ = "0.1.0"
 
@@ -94,4 +98,14 @@ __all__ = [
     "PullAggregator",
     "DFLClient",
     "SemanticDFLCoordinator",
+    # Transport
+    "ITransport",
+    "PeerEndpoint",
+    "MemoryTransport",
+    "GRPCTransport",
+    "TensorSerializer",
+    # Visualization
+    "generate_all_plots",
+    "load_run_data",
 ]
+
