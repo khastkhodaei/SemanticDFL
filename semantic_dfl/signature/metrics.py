@@ -7,9 +7,12 @@ calculators for decentralized clustering and peer discovery.
 
 from __future__ import annotations
 
+import logging
 from typing import Sequence
 import numpy as np
 import torch
+
+logger = logging.getLogger("SemanticDFL.Signature.Metrics")
 
 
 def sparse_cosine_similarity(
@@ -32,6 +35,21 @@ def sparse_cosine_similarity(
     """
     flat_i = u_i.detach().flatten().float()
     flat_j = u_j.detach().flatten().float()
+
+    if flat_i.numel() != flat_j.numel():
+        logger.warning(
+            f"Dimension mismatch in sparse_cosine_similarity: tensor i ({flat_i.numel()} elements) "
+            f"vs tensor j ({flat_j.numel()} elements). Aligning by zero-padding to common dimension."
+        )
+        max_dim = max(flat_i.numel(), flat_j.numel())
+        if flat_i.numel() < max_dim:
+            padded_i = torch.zeros(max_dim, dtype=torch.float32, device=flat_i.device)
+            padded_i[: flat_i.numel()] = flat_i
+            flat_i = padded_i
+        if flat_j.numel() < max_dim:
+            padded_j = torch.zeros(max_dim, dtype=torch.float32, device=flat_j.device)
+            padded_j[: flat_j.numel()] = flat_j
+            flat_j = padded_j
 
     dot = torch.dot(flat_i, flat_j).item()
     norm_i = torch.norm(flat_i, p=2).item()
@@ -65,7 +83,25 @@ def pairwise_cosine_similarity_matrix(
         2D Tensor of shape (N, N) where entry [i, j] is the cosine similarity between u_i and u_j.
     """
     if isinstance(signatures, (list, tuple)):
-        mat = torch.stack([sig.detach().flatten().float() for sig in signatures], dim=0)
+        flat_sigs = [sig.detach().flatten().float() for sig in signatures]
+        if flat_sigs:
+            max_len = max(s.numel() for s in flat_sigs)
+            min_len = min(s.numel() for s in flat_sigs)
+            if max_len != min_len:
+                logger.warning(
+                    f"Dimension mismatch in pairwise_cosine_similarity_matrix signatures: "
+                    f"min {min_len} vs max {max_len}. Aligning to max length {max_len}."
+                )
+                aligned = []
+                for s in flat_sigs:
+                    if s.numel() < max_len:
+                        p = torch.zeros(max_len, dtype=torch.float32, device=s.device)
+                        p[: s.numel()] = s
+                        aligned.append(p)
+                    else:
+                        aligned.append(s)
+                flat_sigs = aligned
+        mat = torch.stack(flat_sigs, dim=0) if flat_sigs else torch.empty((0, 0))
     else:
         mat = signatures.detach().float()
         if mat.ndim == 1:
