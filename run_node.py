@@ -182,14 +182,24 @@ def main():
         sig = client.extract_signature(p=100, round_num=r)
         transport.set_local_weights(client.get_weights(), round_num=r)
 
-        # Step 3: Peer Discovery & Signature Gathering via gRPC
+        # Step 3: Peer Discovery & Synchronized Signature Gathering via gRPC Barrier
         known_peers = transport.discover_peers(query_node_id=args.node_id)
         signatures: Dict[int, torch.Tensor] = {args.node_id: sig}
 
+        # Synchronize signature pool across discovered peers with barrier retry
+        barrier_timeout = 25.0
+        barrier_start = time.time()
         for peer in known_peers:
-            remote_sig = transport.fetch_signature(peer, round_num=r)
+            remote_sig = None
+            while time.time() - barrier_start < barrier_timeout:
+                remote_sig = transport.fetch_signature(peer, round_num=r)
+                if remote_sig is not None and remote_sig.numel() == sig.numel():
+                    break
+                time.sleep(0.3)
             if remote_sig is not None:
                 signatures[peer.node_id] = remote_sig
+            else:
+                node_logger.debug(f"Peer {peer.node_id} signature not available within barrier timeout.")
 
         # Step 4: Top-K Similarity Search
         tau_current = client.threshold_controller.tau
@@ -206,16 +216,24 @@ def main():
         neighbor_sims: Dict[int, float] = {}
 
         for nbr_id, sim in selected_neighbors:
+            if nbr_id == args.node_id:
+                neighbor_weights[nbr_id] = client.get_weights()
+                neighbor_sims[nbr_id] = sim
+                continue
+
             # Find peer endpoint
             nbr_ep = next((p for p in known_peers if p.node_id == nbr_id), None)
             if nbr_ep is not None:
-                pulled_w = transport.pull_model_weights(nbr_ep, round_num=r)
+                pulled_w = None
+                pull_start = time.time()
+                while time.time() - pull_start < 20.0:
+                    pulled_w = transport.pull_model_weights(nbr_ep, round_num=r)
+                    if pulled_w is not None and pulled_w.numel() == client.get_weights().numel():
+                        break
+                    time.sleep(0.3)
                 if pulled_w is not None:
                     neighbor_weights[nbr_id] = pulled_w
                     neighbor_sims[nbr_id] = sim
-            elif nbr_id == args.node_id:
-                neighbor_weights[nbr_id] = client.get_weights()
-                neighbor_sims[nbr_id] = sim
 
         if neighbor_weights:
             new_w = pull_aggregator.aggregate(

@@ -199,8 +199,12 @@ class DFLGrpcServicer(pb2_grpc.SemanticDFLTransportServicer):
                 latest_r = max(self.local_signatures.keys())
                 sig_tensor = self.local_signatures[latest_r]
                 p_val = self.local_p.get(latest_r, 0)
+            elif self.local_weights:
+                latest_w = max(self.local_weights.keys())
+                sig_tensor = torch.zeros_like(self.local_weights[latest_w])
+                p_val = 0
             else:
-                sig_tensor = torch.zeros(10, dtype=torch.float32)
+                sig_tensor = torch.empty(0, dtype=torch.float32)
                 p_val = 0
 
         proto_tensor = TensorSerializer.tensor_to_proto(sig_tensor)
@@ -220,7 +224,7 @@ class DFLGrpcServicer(pb2_grpc.SemanticDFLTransportServicer):
                 latest_r = max(self.local_weights.keys())
                 weights = self.local_weights[latest_r]
             else:
-                weights = torch.zeros(10, dtype=torch.float32)
+                weights = torch.empty(0, dtype=torch.float32)
 
         proto_tensor = TensorSerializer.tensor_to_proto(weights)
         return pb2.ModelChunkPayload(
@@ -427,7 +431,8 @@ class GRPCTransport(ITransport):
         )
         try:
             resp = stub.FetchSignature(req, timeout=self.timeout_seconds)
-            return TensorSerializer.proto_to_tensor(resp.signature)
+            tensor = TensorSerializer.proto_to_tensor(resp.signature)
+            return tensor if tensor.numel() > 0 else None
         except grpc.RpcError as e:
             logger.warning(f"Failed to fetch signature from {target_peer.target_address}: {e}")
             return None
@@ -445,7 +450,8 @@ class GRPCTransport(ITransport):
         )
         try:
             resp = stub.PullModelWeights(req, timeout=self.timeout_seconds)
-            return TensorSerializer.proto_to_tensor(resp.parameters)
+            tensor = TensorSerializer.proto_to_tensor(resp.parameters)
+            return tensor if tensor.numel() > 0 else None
         except grpc.RpcError as e:
             logger.warning(f"Failed to pull weights from {target_peer.target_address}: {e}")
             return None
