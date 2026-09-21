@@ -9,6 +9,7 @@ failover replica sets.
 from __future__ import annotations
 
 from typing import Dict, List, Sequence, Union
+import warnings
 import numpy as np
 import torch
 from sklearn.cluster import AffinityPropagation
@@ -104,7 +105,9 @@ class ZoneClustering:
             random_state=self.random_state,
             max_iter=400,
         )
-        ap.fit(sim_np)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            ap.fit(sim_np)
 
         # Fallback if AP did not form valid centers
         if ap.cluster_centers_indices_ is None or len(ap.cluster_centers_indices_) == 0:
