@@ -152,21 +152,26 @@ def plot_recall_and_cardinality(
     fig, ax1 = plt.subplots(figsize=(8, 5))
     ax2 = ax1.twinx()
 
-    l1 = ax1.plot(rounds, recalls, marker="o", markersize=4, color="#9467bd", linewidth=2.0, label="Recall@K")
-    l2 = ax2.plot(rounds, cardinalities, marker="D", markersize=4, color="#ff7f0e", linewidth=2.0, linestyle=":", label="Cardinality P")
+    l1 = ax1.plot(rounds, recalls, marker="o", markersize=5, color="#9467bd", linewidth=2.0, label="Recall@K")
+    l2 = ax2.plot(rounds, cardinalities, marker="D", markersize=4, color="#ff7f0e", linewidth=2.0, linestyle="--", label="Cardinality P")
 
     ax1.set_xlabel("Communication Round", fontsize=11)
-    ax1.set_ylabel("Recall@K", color="#9467bd", fontsize=11)
-    ax2.set_ylabel("Signature Cardinality P", color="#ff7f0e", fontsize=11)
+    ax1.set_ylabel("Search Recall@K", color="#9467bd", fontsize=11)
+    ax2.set_ylabel("Signature Cardinality P", color="#ff7f0e", fontsize=11, labelpad=12)
     ax1.set_ylim(0.0, 1.05)
     ax1.tick_params(axis="y", labelcolor="#9467bd")
     ax2.tick_params(axis="y", labelcolor="#ff7f0e")
+    ax2.yaxis.set_major_formatter(mtick.StrMethodFormatter("{x:,.0f}"))
 
-    ax1.set_title(title, fontsize=12, fontweight="bold", pad=10)
+    ax1.set_title(title, fontsize=12, fontweight="bold", pad=12)
     ax1.grid(True, linestyle="--", alpha=0.5)
 
-    ax1.legend(loc="upper left")
-    ax2.legend(loc="upper right")
+    # Combine handles and labels into a single unified legend
+    lines = l1 + l2
+    labels = [l.get_label() for l in lines]
+    ax1.legend(lines, labels, loc="center right", frameon=True, framealpha=0.9)
+
+    fig.tight_layout()
 
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
