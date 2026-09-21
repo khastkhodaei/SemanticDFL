@@ -1,0 +1,35 @@
+execution:
+  mode: "distributed"
+  backend: "grpc"
+  distributed:
+    host: "127.0.0.1"
+    base_port: 50050
+    spawn_subprocesses: true
+
+simulation:
+  rounds: 2
+  seed: 42
+  device: "auto"
+
+federated:
+  num_clients: 10
+  k_neighbors: 2
+  zone_size: 3
+  alpha_personalization: 0.67
+
+data:
+  dataset: "fmnist"
+  partitioner: "dirichlet"
+  alpha: 0.3
+  batch_size: 32
+
+model:
+  architecture: "FashionCNN"
+  local_epochs: 1
+  learning_rate: 0.01
+
+logging:
+  save_results_json: true
+  detailed_client_metrics: true
+  generate_plots: true
+  output_dir: "results/slices_10nodes"
