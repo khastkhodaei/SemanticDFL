@@ -103,6 +103,37 @@ def test_default_config_execution_schema():
     assert "spawn_subprocesses" in dist_cfg
 
 
+def test_isolated_profiles_schema():
+    configs_dir = os.path.join(os.path.dirname(__file__), "..", "configs")
+
+    # 1. simulation.yaml
+    sim_path = os.path.join(configs_dir, "simulation.yaml")
+    assert os.path.exists(sim_path)
+    with open(sim_path, "r", encoding="utf-8") as f:
+        sim_cfg = yaml.safe_load(f)
+    assert sim_cfg["execution"]["mode"] == "simulation"
+    assert sim_cfg["federated"]["num_clients"] == 100
+    assert sim_cfg["simulation"]["rounds"] == 50
+
+    # 2. distributed_local.yaml
+    dist_path = os.path.join(configs_dir, "distributed_local.yaml")
+    assert os.path.exists(dist_path)
+    with open(dist_path, "r", encoding="utf-8") as f:
+        dist_cfg = yaml.safe_load(f)
+    assert dist_cfg["execution"]["mode"] == "distributed"
+    assert dist_cfg["network"]["host"] == "127.0.0.1"
+    assert dist_cfg["federated"]["num_clients"] == 3
+
+    # 3. slices_production.yaml
+    slices_path = os.path.join(configs_dir, "slices_production.yaml")
+    assert os.path.exists(slices_path)
+    with open(slices_path, "r", encoding="utf-8") as f:
+        slices_cfg = yaml.safe_load(f)
+    assert slices_cfg["execution"]["mode"] == "slices_distributed"
+    assert slices_cfg["slices"]["num_nodes"] == 100
+    assert len(slices_cfg["slices"]["super_peers"]) >= 2
+
+
 def test_coordinator_lifecycle_with_factory_transports(dummy_dataset):
     MemoryTransport.reset_global_state()
 

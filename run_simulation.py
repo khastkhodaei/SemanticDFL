@@ -342,16 +342,29 @@ def run_distributed_execution(
 ) -> Dict[str, Any]:
     """Spins up independent distributed peer instances communicating over gRPC network sockets."""
     exec_cfg = config.get("execution", {})
-    dist_cfg = exec_cfg.get("distributed", {})
+    dist_cfg = exec_cfg.get("distributed") or {}
+    net_cfg = config.get("network", {})
+    slices_cfg = config.get("slices", {})
     fed_cfg = config.get("federated", {})
     sim_cfg = config.get("simulation", {})
     log_cfg = config.get("logging", {})
 
-    host = str(dist_cfg.get("host", "127.0.0.1"))
-    base_port = int(dist_cfg.get("base_port", 50050))
-    spawn_subprocesses = dist_cfg.get("spawn_subprocesses", True)
-    num_clients = args.num_clients if args.num_clients is not None else fed_cfg.get("num_clients", 10)
-    rounds = args.rounds if args.rounds is not None else sim_cfg.get("rounds", 10)
+    host = str(dist_cfg.get("host") or net_cfg.get("host", "127.0.0.1"))
+    base_port = int(dist_cfg.get("base_port") or net_cfg.get("base_port", 50050))
+    spawn_subprocesses = exec_cfg.get(
+        "spawn_subprocesses",
+        dist_cfg.get("spawn_subprocesses", True)
+    )
+    num_clients = (
+        args.num_clients
+        if args.num_clients is not None
+        else (fed_cfg.get("num_clients") or slices_cfg.get("num_nodes", 10))
+    )
+    rounds = (
+        args.rounds
+        if args.rounds is not None
+        else (sim_cfg.get("rounds") or fed_cfg.get("rounds", 10))
+    )
     output_dir = log_cfg.get("output_dir", "results")
 
     logger.info("=" * 65)
@@ -362,6 +375,9 @@ def run_distributed_execution(
     logger.info(f"Total Peers:       {num_clients}")
     logger.info(f"Total Rounds:      {rounds}")
     logger.info(f"Subprocess Mode:   {spawn_subprocesses}")
+    if slices_cfg:
+        logger.info(f"SLICES Network:    Interface={slices_cfg.get('network_interface')}, Discovery={slices_cfg.get('peer_discovery')}")
+        logger.info(f"Super-Peers:       {slices_cfg.get('super_peers', [])}")
     logger.info("=" * 65)
 
     if not spawn_subprocesses:
@@ -529,9 +545,9 @@ def main():
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["simulation", "distributed"],
+        choices=["simulation", "distributed", "slices_distributed"],
         default=None,
-        help="Override execution mode ('simulation' or 'distributed')",
+        help="Override execution mode ('simulation', 'distributed', 'slices_distributed')",
     )
     parser.add_argument(
         "--rounds",
@@ -565,13 +581,13 @@ def main():
     logger.info(f"Log Transcript:    {log_filepath}")
     logger.info("=" * 65)
 
-    if exec_mode == "simulation":
+    if exec_mode in ("simulation", "memory", "in_memory"):
         run_in_memory_simulation(config, args, logger, timestamp_str)
-    elif exec_mode == "distributed":
+    elif exec_mode in ("distributed", "slices_distributed", "slices", "grpc"):
         run_distributed_execution(config, args, logger, timestamp_str)
     else:
         raise ValueError(
-            f"Unsupported execution mode '{exec_mode}'. Options: 'simulation', 'distributed'."
+            f"Unsupported execution mode '{exec_mode}'. Options: 'simulation', 'distributed', 'slices_distributed'."
         )
 
 

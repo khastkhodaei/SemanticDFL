@@ -29,6 +29,35 @@ SemanticDFL includes a production-grade distributed transport layer powered by g
 
 ---
 
+## Configuration Profiles
+
+SemanticDFL offers three standalone, decoupled configuration profiles located in `configs/`:
+
+| Profile | File | Target Environment | Key Characteristics |
+| :--- | :--- | :--- | :--- |
+| **Research Simulation** | [`configs/simulation.yaml`](file:///d:/Dev/SemanticDFL/configs/simulation.yaml) | Centralized Research & Benchmarking | In-Memory broker, 100 clients, 50 rounds, full academic plotting & JSON metrics |
+| **Distributed Local** | [`configs/distributed_local.yaml`](file:///d:/Dev/SemanticDFL/configs/distributed_local.yaml) | Local Machine Socket Verification | Multi-process gRPC sockets on `127.0.0.1:50050+`, 3 clients, 2 rounds for rapid testbed smoke testing |
+| **SLICES Production** | [`configs/slices_production.yaml`](file:///d:/Dev/SemanticDFL/configs/slices_production.yaml) | EU SLICES Large-Scale Testbed | 100 distributed edge nodes across EU sites, multi-super-peer hierarchy, gRPC over WAN |
+
+### Quick-Select CLI Execution Commands
+
+Run in-memory algorithm simulation:
+```bash
+python run_simulation.py --config configs/simulation.yaml
+```
+
+Run local multi-process gRPC test:
+```bash
+python run_simulation.py --config configs/distributed_local.yaml
+```
+
+Run SLICES multi-node production deployment orchestration:
+```bash
+python run_simulation.py --config configs/slices_production.yaml
+```
+
+---
+
 ## Deployment Modes
 
 ### 1. Docker Compose (Local & Single-Host SLICES Node)
@@ -46,19 +75,19 @@ python run_node.py \
   --host 0.0.0.0 \
   --port 50050 \
   --is_super_peer \
-  --config configs/slices/slices_node_config.yaml
+  --config configs/slices_production.yaml
 ```
 
 #### Start Distributed Worker Nodes across SLICES Sites:
 ```bash
 # Node 1 (Paris Site)
-python run_node.py --node_id 1 --host 0.0.0.0 --port 50051 --bootstrap 192.168.1.10:50050 --config configs/slices/slices_node_config.yaml
+python run_node.py --node_id 1 --host 0.0.0.0 --port 50051 --bootstrap 192.168.1.10:50050 --config configs/slices_production.yaml
 
 # Node 2 (Madrid Site)
-python run_node.py --node_id 2 --host 0.0.0.0 --port 50052 --bootstrap 192.168.1.10:50050 --config configs/slices/slices_node_config.yaml
+python run_node.py --node_id 2 --host 0.0.0.0 --port 50052 --bootstrap 192.168.1.10:50050 --config configs/slices_production.yaml
 
 # Node 3 (Athens Site)
-python run_node.py --node_id 3 --host 0.0.0.0 --port 50053 --bootstrap 192.168.1.10:50050 --config configs/slices/slices_node_config.yaml
+python run_node.py --node_id 3 --host 0.0.0.0 --port 50053 --bootstrap 192.168.1.10:50050 --config configs/slices_production.yaml
 ```
 
 ---

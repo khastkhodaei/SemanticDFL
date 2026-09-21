@@ -52,7 +52,7 @@ def create_transport(
             simulated_latency_ms=simulated_latency,
         )
 
-    if normalized_mode in ("distributed", "grpc"):
+    if normalized_mode in ("distributed", "grpc", "slices_distributed", "slices"):
         host = str(kwargs.get("host", "127.0.0.1"))
         base_port = int(kwargs.get("base_port", 50050))
         explicit_port = kwargs.get("port")
