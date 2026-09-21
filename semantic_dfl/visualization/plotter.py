@@ -89,3 +89,42 @@ def plot_accuracy_curve(
 
     return fig
 
+
+def plot_loss_curve(
+    data: Dict[str, Any],
+    output_path: Optional[str] = None,
+    title: str = "Training and Test Loss Trajectories",
+) -> plt.Figure:
+    """
+    Plots the local training loss and global test loss trajectories across rounds.
+    
+    Args:
+        data: Parsed simulation results dictionary.
+        output_path: Optional destination path to save the generated figure.
+        title: Plot title.
+        
+    Returns:
+        Matplotlib Figure object.
+    """
+    history = data["round_history"]
+    rounds = [h["round"] for h in history]
+    train_losses = [h["avg_train_loss"] for h in history]
+    test_losses = [h["avg_test_loss"] for h in history]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(rounds, train_losses, marker="s", markersize=4, color="#2ca02c", linewidth=2.0, label="Avg Local Train Loss")
+    ax.plot(rounds, test_losses, marker="^", markersize=4, color="#d62728", linewidth=2.0, linestyle="--", label="Avg Test Loss")
+
+    ax.set_xlabel("Communication Round", fontsize=11)
+    ax.set_ylabel("Loss", fontsize=11)
+    ax.set_title(title, fontsize=12, fontweight="bold", pad=10)
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend(loc="upper right", frameon=True)
+
+    if output_path:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        fig.savefig(output_path, bbox_inches="tight")
+
+    return fig
+
+
