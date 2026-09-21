@@ -23,4 +23,5 @@ model:
 logging:
   save_results_json: true
   detailed_client_metrics: true
+  generate_plots: true
   output_dir: "results"

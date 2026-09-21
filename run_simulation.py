@@ -35,6 +35,7 @@ from semantic_dfl.federated.client import DFLClient
 from semantic_dfl.federated.coordinator import SemanticDFLCoordinator
 from semantic_dfl.overlay.son import SemanticOverlayNetwork
 from semantic_dfl.overlay.zone import ZoneManager
+from semantic_dfl.visualization.plotter import generate_all_plots
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
@@ -148,6 +149,7 @@ def main():
     # Extract logging parameters
     save_results_json = log_cfg.get("save_results_json", True)
     detailed_client_metrics = log_cfg.get("detailed_client_metrics", True)
+    generate_plots = log_cfg.get("generate_plots", True)
     output_dir = log_cfg.get("output_dir", "results")
 
     # Setup logger
@@ -318,6 +320,12 @@ def main():
         logger.info(f"[Logging] Results JSON successfully saved to:")
         logger.info(f"  - {json_path}")
         logger.info(f"  - {latest_path}")
+
+        if generate_plots:
+            plots_dir = os.path.join(output_dir, "plots")
+            logger.info(f"Generating academic figures in: {plots_dir}")
+            generate_all_plots(data=results_data, output_dir=plots_dir, export_pdf=True)
+            logger.info(f"[Visualization] Academic figures successfully generated in: {plots_dir}")
 
 
 if __name__ == "__main__":
