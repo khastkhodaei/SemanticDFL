@@ -7,6 +7,7 @@ from semantic_dfl.visualization.plotter import (
     plot_accuracy_curve,
     plot_loss_curve,
     plot_recall_and_cardinality,
+    plot_time_breakdown,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "plot_accuracy_curve",
     "plot_loss_curve",
     "plot_recall_and_cardinality",
+    "plot_time_breakdown",
 ]
