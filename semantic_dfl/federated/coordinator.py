@@ -63,6 +63,26 @@ class SemanticDFLCoordinator:
         self.verbose = verbose
         self.current_round = 0
 
+    def start(self) -> None:
+        """Starts underlying client transport adapters and initializes round-0 weights."""
+        for client in self.clients.values():
+            if client.transport is not None:
+                client.transport.start()
+                client.transport.set_local_weights(client.get_weights(), round_num=0)
+
+    def stop(self) -> None:
+        """Gracefully stops all client transport layers and releases sockets."""
+        for client in self.clients.values():
+            if client.transport is not None:
+                client.transport.stop()
+
+    def __enter__(self) -> SemanticDFLCoordinator:
+        self.start()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.stop()
+
     def step_round(self, epochs_per_round: int = 1) -> Dict[str, Any]:
         """
         Executes one full decentralized learning round with granular phase timers and progress tracking.
@@ -109,7 +129,7 @@ class SemanticDFLCoordinator:
         signatures = {}
         sig_iter = tqdm(self.clients.items(), desc="Extracting Signatures", leave=False) if self.verbose else self.clients.items()
         for nid, client in sig_iter:
-            signatures[nid] = client.extract_signature(p=current_p)
+            signatures[nid] = client.extract_signature(p=current_p, round_num=self.current_round)
         timings["time_signatures"] = time.perf_counter() - t0
 
         # ---------------------------------------------------------------------
@@ -184,7 +204,7 @@ class SemanticDFLCoordinator:
 
         # Update all client models with new weights
         for nid, client in self.clients.items():
-            client.set_weights(new_client_weights[nid])
+            client.set_weights(new_client_weights[nid], round_num=self.current_round)
         timings["time_aggregation"] = time.perf_counter() - t_agg_start
 
         # ---------------------------------------------------------------------
