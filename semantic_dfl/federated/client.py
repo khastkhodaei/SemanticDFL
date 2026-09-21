@@ -39,7 +39,7 @@ class DFLClient:
         device: Optional[torch.device] = None,
     ) -> None:
         self.node_id = node_id
-        self.device = device or torch.device("cpu")
+        self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         self.model = model.to(self.device)
         self.train_loader = train_loader
         self.test_loader = test_loader

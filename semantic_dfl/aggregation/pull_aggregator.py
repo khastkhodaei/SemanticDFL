@@ -98,11 +98,11 @@ class PullAggregator:
         # Compute softmax weights W_ij
         pull_weights = self.compute_pull_weights(similarities)
 
-        # Form collaborative anchor m_i^(t) = sum_j W_{ij} * w_j
-        stacked_neighbors = torch.stack([w.detach().float() for w in neighbors_list], dim=0)
+        # Form collaborative anchor m_i^(t) = sum_j W_{ij} * w_j on client device
+        stacked_neighbors = torch.stack([w.detach().float().to(flat_client.device) for w in neighbors_list], dim=0)
         
         # Reshape weights for broadcasting: (num_neighbors, 1)
-        weights_expanded = pull_weights.unsqueeze(1).to(stacked_neighbors.device)
+        weights_expanded = pull_weights.unsqueeze(1).to(flat_client.device)
         anchor = torch.sum(weights_expanded * stacked_neighbors, dim=0)
 
         # Proximal mixture: w_new = (1 - alpha) * w_tilde + alpha * anchor

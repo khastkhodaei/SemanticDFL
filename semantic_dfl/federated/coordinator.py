@@ -47,6 +47,7 @@ class SemanticDFLCoordinator:
         pull_aggregator: Optional[PullAggregator] = None,
         son: Optional[SemanticOverlayNetwork] = None,
         global_test_loader: Optional[DataLoader] = None,
+        device: Optional[torch.device] = None,
         verbose: bool = False,
     ) -> None:
         self.clients = clients
@@ -58,6 +59,7 @@ class SemanticDFLCoordinator:
         self.son = son or SemanticOverlayNetwork()
         self.search_engine = SimilaritySearchEngine(son=self.son)
         self.global_test_loader = global_test_loader
+        self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         self.verbose = verbose
         self.current_round = 0
 

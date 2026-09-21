@@ -176,7 +176,7 @@ def set_flattened_params(model: nn.Module, flat_params: torch.Tensor) -> None:
             if not param.requires_grad:
                 continue
             numel = param.numel()
-            slice_data = flat_params[offset : offset + numel].view_as(param)
+            slice_data = flat_params[offset : offset + numel].to(device=param.device, dtype=param.dtype).view_as(param)
             param.copy_(slice_data)
             offset += numel
 
