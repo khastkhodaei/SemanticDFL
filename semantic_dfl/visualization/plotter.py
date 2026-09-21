@@ -128,3 +128,51 @@ def plot_loss_curve(
     return fig
 
 
+def plot_recall_and_cardinality(
+    data: Dict[str, Any],
+    output_path: Optional[str] = None,
+    title: str = "Search Recall@K and Signature Cardinality Dynamics",
+) -> plt.Figure:
+    """
+    Plots Recall@K (left axis) alongside Top-P Signature Cardinality (right axis) over rounds.
+    
+    Args:
+        data: Parsed simulation results dictionary.
+        output_path: Optional destination path to save the generated figure.
+        title: Plot title.
+        
+    Returns:
+        Matplotlib Figure object.
+    """
+    history = data["round_history"]
+    rounds = [h["round"] for h in history]
+    recalls = [h.get("avg_recall_at_k", 0.0) for h in history]
+    cardinalities = [h.get("cardinality_p", 0) for h in history]
+
+    fig, ax1 = plt.subplots(figsize=(8, 5))
+    ax2 = ax1.twinx()
+
+    l1 = ax1.plot(rounds, recalls, marker="o", markersize=4, color="#9467bd", linewidth=2.0, label="Recall@K")
+    l2 = ax2.plot(rounds, cardinalities, marker="D", markersize=4, color="#ff7f0e", linewidth=2.0, linestyle=":", label="Cardinality P")
+
+    ax1.set_xlabel("Communication Round", fontsize=11)
+    ax1.set_ylabel("Recall@K", color="#9467bd", fontsize=11)
+    ax2.set_ylabel("Signature Cardinality P", color="#ff7f0e", fontsize=11)
+    ax1.set_ylim(0.0, 1.05)
+    ax1.tick_params(axis="y", labelcolor="#9467bd")
+    ax2.tick_params(axis="y", labelcolor="#ff7f0e")
+
+    ax1.set_title(title, fontsize=12, fontweight="bold", pad=10)
+    ax1.grid(True, linestyle="--", alpha=0.5)
+
+    ax1.legend(loc="upper left")
+    ax2.legend(loc="upper right")
+
+    if output_path:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        fig.savefig(output_path, bbox_inches="tight")
+
+    return fig
+
+
+
