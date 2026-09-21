@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import random
 import sys
@@ -64,11 +65,38 @@ def create_model_factory(architecture: str, dataset_name: str):
         return lambda: FashionCNN(in_channels=in_channels, num_classes=10)
     elif arch == "MLP2NN":
         input_dim = 3072 if is_rgb else 784
-        return lambda: MLP2NN(input_dim=input_dim, hidden_dim=200, num_classes=10)
+        return lambda: MLP2NN(input_dim=input_dim, num_classes=10)
     elif arch in ("ResNet18Small", "ResNet18"):
         return lambda: ResNet18Small(in_channels=in_channels, num_classes=10)
     else:
         raise ValueError(f"Unsupported model architecture: {architecture}")
+
+
+def setup_logger(output_dir: str, timestamp_str: str) -> tuple[logging.Logger, str]:
+    """Configures multi-handler logger writing to console and persistent log file."""
+    os.makedirs(output_dir, exist_ok=True)
+    log_filename = f"simulation_{timestamp_str}.log"
+    log_filepath = os.path.join(output_dir, log_filename)
+
+    logger = logging.getLogger("SemanticDFL")
+    logger.setLevel(logging.INFO)
+    logger.handlers.clear()
+
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+    # File Handler
+    file_handler = logging.FileHandler(log_filepath, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    # Console Stream Handler
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
+    return logger, log_filepath
 
 
 def main():
@@ -92,7 +120,11 @@ def main():
     # Extract simulation parameters
     rounds = sim_cfg.get("rounds", 10)
     seed = sim_cfg.get("seed", 42)
-    device_str = sim_cfg.get("device", "cuda" if torch.cuda.is_available() else "cpu")
+    device_cfg = sim_cfg.get("device", "auto")
+    if device_cfg == "auto":
+        device_str = "cuda" if torch.cuda.is_available() else "cpu"
+    else:
+        device_str = device_cfg
     device = torch.device(device_str)
 
     # Extract federated parameters
@@ -115,20 +147,26 @@ def main():
 
     # Extract logging parameters
     save_results_json = log_cfg.get("save_results_json", True)
+    detailed_client_metrics = log_cfg.get("detailed_client_metrics", True)
     output_dir = log_cfg.get("output_dir", "results")
+
+    # Setup logger
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    logger, log_filepath = setup_logger(output_dir, timestamp_str)
 
     # Set seed
     set_seed(seed)
 
-    print("=" * 65)
-    print("           SemanticDFL Simulation Runner")
-    print("=" * 65)
-    print(f"Config File:       {args.config}")
-    print(f"Dataset:           {dataset_name.upper()} (Partitioner: {partitioner_type}, alpha={alpha_dirichlet})")
-    print(f"Model Architecture:{architecture} (Local Epochs: {local_epochs}, LR: {learning_rate})")
-    print(f"Federated Network: {num_clients} clients, k={k_neighbors}, zone_size={zone_size}, alpha_p={alpha_personalization}")
-    print(f"Simulation:        {rounds} rounds, seed={seed}, device={device}")
-    print("=" * 65)
+    logger.info("=" * 65)
+    logger.info("           SemanticDFL Simulation Runner")
+    logger.info("=" * 65)
+    logger.info(f"Config File:       {args.config}")
+    logger.info(f"Dataset:           {dataset_name.upper()} (Partitioner: {partitioner_type}, alpha={alpha_dirichlet})")
+    logger.info(f"Model Architecture:{architecture} (Local Epochs: {local_epochs}, LR: {learning_rate})")
+    logger.info(f"Federated Network: {num_clients} clients, k={k_neighbors}, zone_size={zone_size}, alpha_p={alpha_personalization}")
+    logger.info(f"Simulation:        {rounds} rounds, seed={seed}, device={device}")
+    logger.info(f"Log Transcript:    {log_filepath}")
+    logger.info("=" * 65)
 
     # Configure data partitioner
     if partitioner_type == "dirichlet":
@@ -142,7 +180,7 @@ def main():
         raise ValueError(f"Unsupported partitioner type: {partitioner_type}")
 
     # Load partitioned dataset
-    print("\nLoading dataset and creating client partitions...")
+    logger.info("Loading dataset and creating client partitions...")
     client_loaders, test_loader = load_partitioned_dataset(
         dataset_name=dataset_name,
         partitioner=partitioner,
@@ -186,11 +224,12 @@ def main():
         pull_aggregator=pull_aggregator,
         son=son,
         global_test_loader=test_loader,
+        device=device,
         verbose=True,
     )
 
     # Run federated rounds
-    print(f"\nStarting {rounds} decentralized federated learning rounds...\n")
+    logger.info(f"Starting {rounds} decentralized federated learning rounds...")
     round_history = []
     start_time = time.time()
 
@@ -212,24 +251,23 @@ def main():
             f"Eval: {timings.get('time_evaluation', 0.0):.2f}s]"
         )
 
-        print(
+        logger.info(
             f"Round {metrics['round']:3d}/{rounds:3d} | "
             f"Test Acc: {metrics['avg_test_accuracy']:6.2f}% | "
             f"Train Loss: {metrics['avg_train_loss']:6.4f} | "
             f"Test Loss: {metrics['avg_test_loss']:6.4f} | "
             f"Recall@K: {metrics['avg_recall_at_k']:5.2f} | "
             f"Card P: {metrics['cardinality_p']:4d} | "
-            f"Time: {round_duration:.2f}s | {timing_str}",
-            flush=True,
+            f"Time: {round_duration:.2f}s | {timing_str}"
         )
 
     total_duration = time.time() - start_time
-    print(f"\nSimulation finished in {total_duration:.2f}s.")
+    logger.info(f"Simulation finished in {total_duration:.2f}s.")
 
     # Final evaluation
-    print("\n" + "=" * 65)
-    print("                    Final Evaluation")
-    print("=" * 65)
+    logger.info("=" * 65)
+    logger.info("                    Final Evaluation")
+    logger.info("=" * 65)
     final_client_accuracies = {}
     final_client_losses = {}
     for cid, client in clients.items():
@@ -243,15 +281,13 @@ def main():
     min_acc = float(np.min(acc_values))
     max_acc = float(np.max(acc_values))
 
-    print(f"Mean Test Accuracy:   {mean_acc:.2f}% +/- {std_acc:.2f}%")
-    print(f"Accuracy Range:       [{min_acc:.2f}%, {max_acc:.2f}%]")
-    print(f"Best Final Peer:      {max_acc:.2f}%")
-    print("=" * 65)
+    logger.info(f"Mean Test Accuracy:   {mean_acc:.2f}% +/- {std_acc:.2f}%")
+    logger.info(f"Accuracy Range:       [{min_acc:.2f}%, {max_acc:.2f}%]")
+    logger.info(f"Best Final Peer:      {max_acc:.2f}%")
+    logger.info("=" * 65)
 
     # Save summary metrics to output_dir
     if save_results_json:
-        os.makedirs(output_dir, exist_ok=True)
-        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         results_data = {
             "timestamp": timestamp_str,
             "config": config,
@@ -264,8 +300,8 @@ def main():
                 "final_round_train_loss": round_history[-1]["avg_train_loss"] if round_history else None,
                 "final_round_test_loss": round_history[-1]["avg_test_loss"] if round_history else None,
             },
-            "per_client_final_accuracy": final_client_accuracies,
-            "per_client_final_loss": final_client_losses,
+            "per_client_final_accuracy": final_client_accuracies if detailed_client_metrics else None,
+            "per_client_final_loss": final_client_losses if detailed_client_metrics else None,
             "round_history": round_history,
         }
 
@@ -279,7 +315,9 @@ def main():
         with open(latest_path, "w", encoding="utf-8") as f:
             json.dump(results_data, f, indent=2)
 
-        print(f"\n[Logging] Results successfully saved to:\n  - {json_path}\n  - {latest_path}")
+        logger.info(f"[Logging] Results JSON successfully saved to:")
+        logger.info(f"  - {json_path}")
+        logger.info(f"  - {latest_path}")
 
 
 if __name__ == "__main__":

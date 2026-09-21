@@ -1,6 +1,7 @@
 simulation:
   rounds: 50
   seed: 42
+  device: "auto"
 
 federated:
   num_clients: 100
@@ -21,4 +22,5 @@ model:
 
 logging:
   save_results_json: true
+  detailed_client_metrics: true
   output_dir: "results"
