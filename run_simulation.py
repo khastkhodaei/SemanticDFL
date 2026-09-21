@@ -186,6 +186,7 @@ def main():
         pull_aggregator=pull_aggregator,
         son=son,
         global_test_loader=test_loader,
+        verbose=True,
     )
 
     # Run federated rounds

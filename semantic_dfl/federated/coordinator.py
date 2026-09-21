@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from semantic_dfl.aggregation.pull_aggregator import PullAggregator
 from semantic_dfl.federated.client import DFLClient
@@ -46,6 +47,7 @@ class SemanticDFLCoordinator:
         pull_aggregator: Optional[PullAggregator] = None,
         son: Optional[SemanticOverlayNetwork] = None,
         global_test_loader: Optional[DataLoader] = None,
+        verbose: bool = False,
     ) -> None:
         self.clients = clients
         self.p_cardinality = p_cardinality
@@ -56,11 +58,12 @@ class SemanticDFLCoordinator:
         self.son = son or SemanticOverlayNetwork()
         self.search_engine = SimilaritySearchEngine(son=self.son)
         self.global_test_loader = global_test_loader
+        self.verbose = verbose
         self.current_round = 0
 
     def step_round(self, epochs_per_round: int = 1) -> Dict[str, Any]:
         """
-        Executes one full decentralized learning round with granular phase timers.
+        Executes one full decentralized learning round with granular phase timers and progress tracking.
         
         Args:
             epochs_per_round: Local training epochs per client.
@@ -75,15 +78,20 @@ class SemanticDFLCoordinator:
         # ---------------------------------------------------------------------
         # Step 1: Local Client Training
         # ---------------------------------------------------------------------
+        if self.verbose:
+            print("  [1/5] Local Training ...", flush=True)
         t0 = time.perf_counter()
         train_losses = {}
-        for nid, client in self.clients.items():
+        client_iter = tqdm(self.clients.items(), desc="Training Clients", leave=False) if self.verbose else self.clients.items()
+        for nid, client in client_iter:
             train_losses[nid] = client.train_epoch(epochs=epochs_per_round)
         timings["time_local_training"] = time.perf_counter() - t0
 
         # ---------------------------------------------------------------------
         # Step 2: Adaptive Cardinality Tuning & Top-P Signature Extraction
         # ---------------------------------------------------------------------
+        if self.verbose:
+            print("  [2/5] Signature Extraction ...", flush=True)
         t0 = time.perf_counter()
         all_weights = {nid: client.get_weights() for nid, client in self.clients.items()}
         
@@ -97,13 +105,16 @@ class SemanticDFLCoordinator:
             current_p = self.p_cardinality
 
         signatures = {}
-        for nid, client in self.clients.items():
+        sig_iter = tqdm(self.clients.items(), desc="Extracting Signatures", leave=False) if self.verbose else self.clients.items()
+        for nid, client in sig_iter:
             signatures[nid] = client.extract_signature(p=current_p)
         timings["time_signatures"] = time.perf_counter() - t0
 
         # ---------------------------------------------------------------------
         # Step 3: Semantic Overlay Network (SON) Topology Construction
         # ---------------------------------------------------------------------
+        if self.verbose:
+            print("  [3/5] SON & AP Clustering ...", flush=True)
         t0 = time.perf_counter()
         if (self.current_round - 1) % self.son_refresh_interval == 0:
             self.son.build_topology(signatures, p=current_p)
@@ -112,12 +123,15 @@ class SemanticDFLCoordinator:
         # ---------------------------------------------------------------------
         # Step 4: Top-K Peer Search & Personalized Pull Aggregation
         # ---------------------------------------------------------------------
+        if self.verbose:
+            print("  [4/5] Similarity Search ...", flush=True)
         t_search_start = time.perf_counter()
         selected_neighbors_all = {}
         recalls = []
         avg_taus = []
 
-        for nid, client in self.clients.items():
+        search_iter = tqdm(self.clients.items(), desc="Similarity Search", leave=False) if self.verbose else self.clients.items()
+        for nid, client in search_iter:
             tau_current = client.threshold_controller.tau
             avg_taus.append(tau_current)
 
@@ -149,9 +163,12 @@ class SemanticDFLCoordinator:
         timings["time_search"] = time.perf_counter() - t_search_start
 
         # Pull neighbor parameter vectors and aggregate
+        if self.verbose:
+            print("  [5/5] Pull Aggregation ...", flush=True)
         t_agg_start = time.perf_counter()
         new_client_weights = {}
-        for nid, client in self.clients.items():
+        agg_iter = tqdm(self.clients.items(), desc="Pull Aggregation", leave=False) if self.verbose else self.clients.items()
+        for nid, client in agg_iter:
             selected_neighbors = selected_neighbors_all[nid]
             neighbor_w = {nbr_id: all_weights[nbr_id] for nbr_id, _ in selected_neighbors}
             neighbor_sims = {nbr_id: sim for nbr_id, sim in selected_neighbors}
@@ -175,7 +192,8 @@ class SemanticDFLCoordinator:
         test_losses = []
         test_accuracies = []
 
-        for nid, client in self.clients.items():
+        eval_iter = tqdm(self.clients.items(), desc="Evaluating Clients", leave=False) if self.verbose else self.clients.items()
+        for nid, client in eval_iter:
             eval_loader = self.global_test_loader if self.global_test_loader is not None else client.test_loader
             if eval_loader is not None:
                 loss, acc = client.evaluate(eval_loader)
@@ -199,4 +217,3 @@ class SemanticDFLCoordinator:
             "avg_threshold_tau": avg_tau,
             "timings": timings,
         }
-
