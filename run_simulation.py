@@ -201,6 +201,16 @@ def main():
         metrics["duration_seconds"] = round_duration
         round_history.append(metrics)
 
+        timings = metrics.get("timings", {})
+        timing_str = (
+            f"[Train: {timings.get('time_local_training', 0.0):.2f}s, "
+            f"Sig: {timings.get('time_signatures', 0.0):.2f}s, "
+            f"SON: {timings.get('time_topology', 0.0):.2f}s, "
+            f"Search: {timings.get('time_search', 0.0):.2f}s, "
+            f"Agg: {timings.get('time_aggregation', 0.0):.2f}s, "
+            f"Eval: {timings.get('time_evaluation', 0.0):.2f}s]"
+        )
+
         print(
             f"Round {metrics['round']:3d}/{rounds:3d} | "
             f"Test Acc: {metrics['avg_test_accuracy']:6.2f}% | "
@@ -208,7 +218,8 @@ def main():
             f"Test Loss: {metrics['avg_test_loss']:6.4f} | "
             f"Recall@K: {metrics['avg_recall_at_k']:5.2f} | "
             f"Card P: {metrics['cardinality_p']:4d} | "
-            f"Time: {round_duration:.2f}s"
+            f"Time: {round_duration:.2f}s | {timing_str}",
+            flush=True,
         )
 
     total_duration = time.time() - start_time
