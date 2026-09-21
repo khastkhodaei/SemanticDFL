@@ -1,0 +1,24 @@
+simulation:
+  rounds: 50
+  seed: 42
+
+federated:
+  num_clients: 100
+  k_neighbors: 10
+  zone_size: 5
+  alpha_personalization: 0.67
+
+data:
+  dataset: "fmnist"
+  partitioner: "dirichlet"
+  alpha: 0.3
+  batch_size: 32
+
+model:
+  architecture: "FashionCNN"
+  local_epochs: 1
+  learning_rate: 0.01
+
+logging:
+  save_results_json: true
+  output_dir: "results"
