@@ -28,8 +28,7 @@ from semantic_dfl.federated.client import DFLClient
 from semantic_dfl.overlay.son import SemanticOverlayNetwork
 from semantic_dfl.overlay.zone import ZoneManager
 from semantic_dfl.search.engine import SimilaritySearchEngine, compute_recall_at_k, ideal_centralized_top_k
-from semantic_dfl.transport.grpc_transport import GRPCTransport
-from semantic_dfl.transport.interface import PeerEndpoint
+from semantic_dfl.transport import PeerEndpoint, create_transport
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,8 +85,9 @@ def main():
     node_logger.info(f"Total Rounds: {rounds}")
     node_logger.info("=" * 60)
 
-    # Initialize and start gRPC Transport Layer
-    transport = GRPCTransport(
+    # Initialize and start gRPC Transport Layer via factory
+    transport = create_transport(
+        mode="distributed",
         node_id=args.node_id,
         host=args.host,
         port=args.port,
