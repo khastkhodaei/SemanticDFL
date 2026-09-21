@@ -56,6 +56,25 @@ class TestAdaptiveThresholdController:
 class TestSimilaritySearchEngine:
     """Tests for hierarchical SON top-down search and Recall@K."""
 
+    def test_search_engine_dimension_mismatch_resilience(self):
+        """Verifies peer search does not crash on tensor dimension mismatches."""
+        query_sig = torch.randn(10)
+        all_sigs = {
+            0: query_sig,
+            1: torch.randn(100),
+            2: torch.randn(100),
+        }
+        son = SemanticOverlayNetwork()
+        engine = SimilaritySearchEngine(son=son)
+        peers = engine.search_peers(
+            query_node_id=0,
+            query_signature=query_sig,
+            all_signatures=all_sigs,
+            k=2,
+            tau=0.0,
+        )
+        assert len(peers) <= 2
+
     def test_search_engine_recall_against_oracle(self):
         torch.manual_seed(42)
         num_nodes = 30
