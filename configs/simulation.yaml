@@ -1,0 +1,37 @@
+# =====================================================================
+# SemanticDFL Configuration Profile: Paper Research & Algorithm Simulation
+# High-performance in-memory simulation with 100 decentralized clients.
+# =====================================================================
+
+execution:
+  mode: "simulation" # options: "simulation" | "distributed" | "slices_distributed"
+  backend: "memory"
+
+simulation:
+  rounds: 50
+  seed: 42
+  device: "auto"
+
+federated:
+  num_clients: 100
+  k_neighbors: 10
+  zone_size: 5
+  alpha_personalization: 0.67
+
+data:
+  dataset: "fmnist"
+  partitioner: "dirichlet"
+  alpha: 0.3
+  batch_size: 32
+  data_dir: "./Datasets"
+
+model:
+  architecture: "FashionCNN"
+  local_epochs: 1
+  learning_rate: 0.01
+
+logging:
+  save_results_json: true
+  detailed_client_metrics: true
+  generate_plots: true
+  output_dir: "results/simulation"
