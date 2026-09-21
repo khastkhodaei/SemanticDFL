@@ -1,3 +1,11 @@
+execution:
+  mode: "simulation" # options: "simulation" | "distributed"
+  backend: "grpc"
+  distributed:
+    host: "127.0.0.1"
+    base_port: 50050
+    spawn_subprocesses: true
+
 simulation:
   rounds: 50
   seed: 42
