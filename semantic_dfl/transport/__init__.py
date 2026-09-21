@@ -10,6 +10,7 @@ Exports abstract and concrete transport mechanisms:
 
 from semantic_dfl.transport.interface import ITransport, PeerEndpoint
 from semantic_dfl.transport.memory_transport import MemoryTransport
+from semantic_dfl.transport.factory import InMemoryTransport, create_transport
 from semantic_dfl.transport.grpc_transport import (
     DFLGrpcServicer,
     GRPCTransport,
@@ -20,7 +21,9 @@ __all__ = [
     "ITransport",
     "PeerEndpoint",
     "MemoryTransport",
+    "InMemoryTransport",
     "GRPCTransport",
     "DFLGrpcServicer",
     "TensorSerializer",
+    "create_transport",
 ]

@@ -291,6 +291,9 @@ class GRPCTransport(ITransport):
         self.server.add_insecure_port(listen_addr)
         self.server.start()
         self.is_running = True
+        self._local_endpoint = PeerEndpoint(node_id=self.node_id, hostname=self.host, port=self.port, role="peer")
+        with self.servicer._lock:
+            self.servicer.registry[self.node_id] = self._local_endpoint
         logger.info(f"gRPC transport server started on {listen_addr} for node {self.node_id}")
 
     def stop(self) -> None:
@@ -379,7 +382,13 @@ class GRPCTransport(ITransport):
         zone_id: str = "",
         radius_ttl: int = 2,
     ) -> List[PeerEndpoint]:
-        return list(self.servicer.registry.values())
+        with self.servicer._lock:
+            results = []
+            for nid, ep in self.servicer.registry.items():
+                if nid != query_node_id:
+                    if not zone_id or ep.zone_id == zone_id:
+                        results.append(ep)
+            return results
 
     def send_signature(
         self,
