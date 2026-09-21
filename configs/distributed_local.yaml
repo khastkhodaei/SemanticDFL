@@ -1,0 +1,52 @@
+# =====================================================================
+# SemanticDFL Configuration Profile: Local Machine gRPC Verification Mode
+# Rapid socket testing across independent local processes with gRPC transport.
+# =====================================================================
+
+execution:
+  mode: "distributed" # options: "simulation" | "distributed" | "slices_distributed"
+  backend: "grpc"
+  spawn_subprocesses: true
+  distributed:
+    host: "127.0.0.1"
+    base_port: 50050
+    spawn_subprocesses: true
+
+network:
+  host: "127.0.0.1"
+  base_port: 50050
+
+simulation:
+  rounds: 2
+  seed: 42
+  device: "cpu"
+
+federated:
+  num_clients: 3
+  k_neighbors: 1
+  zone_size: 2
+  rounds: 2
+  alpha_personalization: 0.67
+
+data:
+  dataset: "fmnist"
+  partitioner: "dirichlet"
+  alpha: 0.3
+  batch_size: 32
+  data_dir: "./Datasets"
+
+model:
+  architecture: "FashionCNN"
+  local_epochs: 1
+  learning_rate: 0.01
+
+transport:
+  backend: "grpc"
+  max_workers: 10
+  timeout_seconds: 15.0
+
+logging:
+  save_results_json: true
+  detailed_client_metrics: true
+  generate_plots: false
+  output_dir: "results/distributed_local"
