@@ -277,3 +277,67 @@ def compute_average_degree(adjacency_graph: Dict[int, List[int]]) -> float:
         return 0.0
     total_edges = sum(len(neighbors) for neighbors in adjacency_graph.values())
     return total_edges / float(len(adjacency_graph))
+
+
+def export_topology_graph_json(
+    adjacency_graph: Dict[int, List[int]],
+    output_path: str = "results/topology_graph.json",
+) -> str:
+    """
+    Exports structured graph metrics and all-pairs shortest path hop distance matrix to JSON.
+    
+    Args:
+        adjacency_graph: Graph adjacency mapping node_id -> [neighbors].
+        output_path: Destination JSON filepath.
+        
+    Returns:
+        Absolute filepath to exported JSON.
+    """
+    import json
+    import os
+
+    os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
+    g = nx.Graph()
+    for u, neighbors in adjacency_graph.items():
+        g.add_node(u)
+        for v in neighbors:
+            g.add_edge(u, v)
+
+    num_nodes = g.number_of_nodes()
+    num_edges = g.number_of_edges()
+    avg_degree = compute_average_degree(adjacency_graph)
+
+    # Compute diameter (or max component diameter)
+    if num_nodes > 0:
+        if nx.is_connected(g):
+            diameter = int(nx.diameter(g))
+        else:
+            components = [g.subgraph(c).copy() for c in nx.connected_components(g)]
+            diameter = int(max(nx.diameter(comp) for comp in components if len(comp) > 1) if any(len(c) > 1 for c in components) else 0)
+        clustering_coeff = float(nx.average_clustering(g))
+    else:
+        diameter = 0
+        clustering_coeff = 0.0
+
+    # Build NxN all-pairs hop distance matrix
+    distance_matrix: Dict[str, Dict[str, int]] = {}
+    path_lengths = dict(nx.all_pairs_shortest_path_length(g))
+    for u in range(num_nodes):
+        distance_matrix[str(u)] = {}
+        for v in range(num_nodes):
+            distance_matrix[str(u)][str(v)] = int(path_lengths.get(u, {}).get(v, -1))
+
+    serializable = {
+        "num_nodes": num_nodes,
+        "num_edges": num_edges,
+        "average_degree": float(avg_degree),
+        "diameter": diameter,
+        "clustering_coefficient": clustering_coeff,
+        "adjacency": {str(k): v for k, v in adjacency_graph.items()},
+        "hop_distance_matrix": distance_matrix,
+    }
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(serializable, f, indent=2)
+
+    return output_path

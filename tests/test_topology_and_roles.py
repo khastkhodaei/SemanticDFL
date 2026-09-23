@@ -5,6 +5,7 @@ VRF Leader Election, Freshness Guards, and Traffic Accounting.
 
 import pytest
 import torch
+import numpy as np
 
 from semantic_dfl.aggregation.pull_aggregator import PullAggregator, compute_alpha_from_psi
 from semantic_dfl.overlay.descriptors import PeerRole
@@ -170,3 +171,60 @@ class TestSearchEngineTrafficAndStats:
         assert stats["scored_edges"] > 0
         assert stats["control_bytes"] > 0
         assert 0.0 <= stats["acceptance_rate"] <= 1.0
+
+
+class TestSeedManagementAndGraphExports:
+    """Tests for granular seed management, dynamic vs fixed topology, and graph JSON exports."""
+
+    def test_export_topology_graph_json(self, tmp_path):
+        from semantic_dfl.overlay.topology import export_topology_graph_json
+        import json
+
+        adj = generate_ring_topology(num_nodes=8, degree=2)
+        out_file = str(tmp_path / "topology_graph.json")
+
+        exported_path = export_topology_graph_json(adjacency_graph=adj, output_path=out_file)
+        assert exported_path == out_file
+
+        with open(out_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        assert data["num_nodes"] == 8
+        assert data["num_edges"] == 8
+        assert data["average_degree"] == 2.0
+        assert data["diameter"] == 4  # Ring of 8 nodes with degree 2 has diameter 4
+        assert "hop_distance_matrix" in data
+        assert data["hop_distance_matrix"]["0"]["4"] == 4
+        assert data["hop_distance_matrix"]["0"]["1"] == 1
+
+    def test_granular_seeds_independence(self):
+        from semantic_dfl.data.partitioning import DirichletPartitioner
+        from semantic_dfl.core.models import FashionCNN, get_model_fingerprint
+
+        # Same data seed -> same partitions
+        targets = np.repeat(np.arange(10), 50)
+        p1 = DirichletPartitioner(alpha=0.3, seed=100).partition(targets, 5)
+        p2 = DirichletPartitioner(alpha=0.3, seed=100).partition(targets, 5)
+        p3 = DirichletPartitioner(alpha=0.3, seed=200).partition(targets, 5)
+        assert p1 == p2
+        assert p1 != p3
+
+        # Model seed reproducibility
+        torch.manual_seed(500)
+        m1 = FashionCNN()
+        torch.manual_seed(500)
+        m2 = FashionCNN()
+        torch.manual_seed(600)
+        m3 = FashionCNN()
+        assert get_model_fingerprint(m1) == get_model_fingerprint(m2)
+        assert get_model_fingerprint(m1) != get_model_fingerprint(m3)
+
+    def test_fixed_vs_dynamic_topology_seeding(self):
+        # Fixed seed -> identical graph
+        g1 = generate_small_world_topology(num_nodes=15, k_neighbors=4, p_rewire=0.5, seed=42)
+        g2 = generate_small_world_topology(num_nodes=15, k_neighbors=4, p_rewire=0.5, seed=42)
+        assert g1 == g2
+
+        # Dynamic / different seed -> different graph
+        g3 = generate_small_world_topology(num_nodes=15, k_neighbors=4, p_rewire=0.5, seed=999)
+        assert g1 != g3

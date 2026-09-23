@@ -15,6 +15,7 @@ from semantic_dfl.overlay.topology import (
     build_network_topology,
     compute_average_degree,
     compute_r_hop_neighborhood,
+    export_topology_graph_json,
     generate_grid_topology,
     generate_random_geometric_topology,
     generate_ring_topology,
@@ -40,4 +41,5 @@ __all__ = [
     "generate_slices_wan_topology",
     "compute_r_hop_neighborhood",
     "compute_average_degree",
+    "export_topology_graph_json",
 ]

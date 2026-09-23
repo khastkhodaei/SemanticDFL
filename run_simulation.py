@@ -167,6 +167,17 @@ def run_in_memory_simulation(
     generate_plots = log_cfg.get("generate_plots", True)
     output_dir = log_cfg.get("output_dir", "results")
 
+    seeds_cfg = config.get("seeds", {})
+    topology_seed = seeds_cfg.get("topology_seed", seed)
+    data_seed = seeds_cfg.get("data_seed", seed)
+    vrf_seed = seeds_cfg.get("vrf_seed", seed)
+    model_seed = seeds_cfg.get("model_seed", seed)
+
+    net_cfg = config.get("network", {})
+    dynamic_topology = net_cfg.get("dynamic_topology", False)
+    if dynamic_topology:
+        topology_seed = random.randint(1, 1000000)
+
     set_seed(seed)
 
     logger.info("=" * 65)
@@ -175,17 +186,18 @@ def run_in_memory_simulation(
     logger.info(f"Dataset:           {dataset_name.upper()} (Partitioner: {partitioner_type}, alpha={alpha_dirichlet})")
     logger.info(f"Model Architecture:{architecture} (Local Epochs: {local_epochs}, LR: {learning_rate})")
     logger.info(f"Federated Network: {num_clients} clients, k={k_neighbors}, zone_size={zone_size}, alpha_p={alpha_personalization}")
-    logger.info(f"Simulation:        {rounds} rounds, seed={seed}, device={device}")
+    logger.info(f"Seeds:             Topo={topology_seed} (Dynamic={dynamic_topology}), Data={data_seed}, VRF={vrf_seed}, Model={model_seed}")
+    logger.info(f"Simulation:        {rounds} rounds, global_seed={seed}, device={device}")
     logger.info("=" * 65)
 
-    # Configure data partitioner
+    # Configure data partitioner with data_seed
     if partitioner_type == "dirichlet":
-        partitioner = DirichletPartitioner(alpha=alpha_dirichlet, seed=seed)
+        partitioner = DirichletPartitioner(alpha=alpha_dirichlet, seed=data_seed)
     elif partitioner_type == "pathological":
         num_classes = data_cfg.get("num_classes_per_client", 2)
-        partitioner = PathologicalPartitioner(num_classes_per_client=num_classes, seed=seed)
+        partitioner = PathologicalPartitioner(num_classes_per_client=num_classes, seed=data_seed)
     elif partitioner_type == "iid":
-        partitioner = IIDPartitioner(seed=seed)
+        partitioner = IIDPartitioner(seed=data_seed)
     else:
         raise ValueError(f"Unsupported partitioner type: {partitioner_type}")
 
@@ -202,7 +214,8 @@ def run_in_memory_simulation(
 
     model_fn = create_model_factory(architecture, dataset_name)
 
-    # Create DFL clients with In-Memory Transport
+    # Create DFL clients with In-Memory Transport & model_seed
+    torch.manual_seed(model_seed)
     clients: Dict[int, DFLClient] = {}
     for client_id, train_loader in client_loaders.items():
         model = model_fn().to(device)
@@ -223,10 +236,8 @@ def run_in_memory_simulation(
         )
         clients[client_id] = client
 
-    net_cfg = config.get("network", {})
     topology_type = net_cfg.get("topology") or fed_cfg.get("topology", "ring")
     topology_degree = net_cfg.get("degree") or fed_cfg.get("degree", 4)
-    topology_seed = sim_cfg.get("seed", 42)
 
     # Build physical network topology
     adjacency_graph = build_network_topology(
@@ -237,7 +248,12 @@ def run_in_memory_simulation(
     )
     avg_degree = compute_average_degree(adjacency_graph)
 
-    zone_manager = ZoneManager(max_zone_size=zone_size, seed=seed)
+    # Export topology graph JSON
+    topo_graph_path = os.path.join(output_dir, "topology_graph.json")
+    from semantic_dfl.overlay.topology import export_topology_graph_json
+    export_topology_graph_json(adjacency_graph=adjacency_graph, output_path=topo_graph_path)
+
+    zone_manager = ZoneManager(max_zone_size=zone_size, seed=vrf_seed)
     son = SemanticOverlayNetwork(zone_manager=zone_manager)
     pull_aggregator = PullAggregator(default_alpha=alpha_personalization)
 

@@ -11,6 +11,12 @@ simulation:
   seed: 42
   device: "auto"
 
+seeds:
+  topology_seed: 42
+  data_seed: 42
+  vrf_seed: 42
+  model_seed: 42
+
 federated:
   num_clients: 100
   k_neighbors: 10
@@ -21,7 +27,7 @@ network:
   topology: "small_world" # options: "ring" | "small_world" | "geometric" | "grid" | "slices_wan"
   degree: 6
   p_rewire: 0.15
-
+  dynamic_topology: false
 
 data:
   dataset: "fmnist"
