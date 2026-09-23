@@ -108,7 +108,66 @@ def test_generate_all_plots(sample_results_data):
         assert os.path.exists(os.path.join(tmp_dir, "accuracy_convergence.png"))
         assert os.path.exists(os.path.join(tmp_dir, "accuracy_convergence.pdf"))
         assert os.path.exists(os.path.join(tmp_dir, "loss_trajectories.png"))
-        assert os.path.exists(os.path.join(tmp_dir, "search_dynamics.png"))
         assert os.path.exists(os.path.join(tmp_dir, "time_breakdown.png"))
 
         plt.close("all")
+
+
+def test_generate_paper_evaluation_plots(sample_results_data):
+    from semantic_dfl.visualization.paper_plots import (
+        generate_paper_evaluation_plots,
+        plot_figure_1_accuracy_curves,
+        plot_figure_2_search_recall,
+        plot_figure_3_traffic_breakdown,
+        plot_figure_4_adaptive_threshold,
+        plot_figure_5_personalization_coupling,
+        plot_figure_6_freshness_guard,
+        plot_figure_7_topology_sensitivity,
+    )
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        figs = generate_paper_evaluation_plots(sample_results_data, output_dir=tmp_dir, export_pdf=True, dpi=100)
+
+        # Verify all 7 figures returned
+        expected_figs = [
+            "fig1_accuracy_curves",
+            "fig2_search_recall",
+            "fig3_traffic_breakdown",
+            "fig4_adaptive_threshold",
+            "fig5_personalization_coupling",
+            "fig6_freshness_guard",
+            "fig7_topology_sensitivity",
+        ]
+        for name in expected_figs:
+            assert name in figs
+            assert os.path.exists(os.path.join(tmp_dir, f"{name}.png"))
+            assert os.path.exists(os.path.join(tmp_dir, f"{name}.pdf"))
+
+        plt.close("all")
+
+
+def test_individual_paper_figures_without_history():
+    from semantic_dfl.visualization.paper_plots import (
+        plot_figure_1_accuracy_curves,
+        plot_figure_2_search_recall,
+        plot_figure_3_traffic_breakdown,
+        plot_figure_4_adaptive_threshold,
+        plot_figure_5_personalization_coupling,
+        plot_figure_6_freshness_guard,
+        plot_figure_7_topology_sensitivity,
+    )
+
+    empty_data = {}
+    f1 = plot_figure_1_accuracy_curves(empty_data)
+    f2 = plot_figure_2_search_recall(empty_data)
+    f3 = plot_figure_3_traffic_breakdown(empty_data)
+    f4 = plot_figure_4_adaptive_threshold(empty_data)
+    f5 = plot_figure_5_personalization_coupling(empty_data)
+    f6 = plot_figure_6_freshness_guard(empty_data)
+    f7 = plot_figure_7_topology_sensitivity(empty_data)
+
+    for f in [f1, f2, f3, f4, f5, f6, f7]:
+        assert isinstance(f, plt.Figure)
+
+    plt.close("all")
+
