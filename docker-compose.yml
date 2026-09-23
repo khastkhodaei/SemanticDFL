@@ -1,0 +1,252 @@
+# ==============================================================================
+# SemanticDFL Multi-Node Cluster Configuration (10 Nodes)
+# Generated automatically by scripts/generate_compose.py
+# Paper: Dogani, Khastkhodaei, Khunjush, Laoutaris (POMACS / ACM SIGMETRICS 2026)
+# ==============================================================================
+
+version: '3.8'
+networks:
+  semantic_dfl_net:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.28.0.0/16
+services:
+  semantic_dfl_node_0:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_0
+    hostname: node-0
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.10
+    ports:
+    - 50050:50050
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '0'
+      NODE_PORT: '50050'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    command: --node_id 0 --host 0.0.0.0 --port 50050 --is_super_peer --rounds 10 --config
+      configs/default_config.yaml
+    restart: unless-stopped
+  semantic_dfl_node_1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_1
+    hostname: node-1
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.11
+    ports:
+    - 50051:50051
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '1'
+      NODE_PORT: '50051'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 1 --host 0.0.0.0 --port 50051 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_2
+    hostname: node-2
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.12
+    ports:
+    - 50052:50052
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '2'
+      NODE_PORT: '50052'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 2 --host 0.0.0.0 --port 50052 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_3
+    hostname: node-3
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.13
+    ports:
+    - 50053:50053
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '3'
+      NODE_PORT: '50053'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 3 --host 0.0.0.0 --port 50053 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_4
+    hostname: node-4
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.14
+    ports:
+    - 50054:50054
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '4'
+      NODE_PORT: '50054'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 4 --host 0.0.0.0 --port 50054 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_5
+    hostname: node-5
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.15
+    ports:
+    - 50055:50055
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '5'
+      NODE_PORT: '50055'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 5 --host 0.0.0.0 --port 50055 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_6:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_6
+    hostname: node-6
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.16
+    ports:
+    - 50056:50056
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '6'
+      NODE_PORT: '50056'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 6 --host 0.0.0.0 --port 50056 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_7:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_7
+    hostname: node-7
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.17
+    ports:
+    - 50057:50057
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '7'
+      NODE_PORT: '50057'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 7 --host 0.0.0.0 --port 50057 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_8:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_8
+    hostname: node-8
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.18
+    ports:
+    - 50058:50058
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '8'
+      NODE_PORT: '50058'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 8 --host 0.0.0.0 --port 50058 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure
+  semantic_dfl_node_9:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_dfl_node_9
+    hostname: node-9
+    networks:
+      semantic_dfl_net:
+        ipv4_address: 172.28.0.19
+    ports:
+    - 50059:50059
+    environment:
+      PYTHONUNBUFFERED: '1'
+      NODE_ID: '9'
+      NODE_PORT: '50059'
+    volumes:
+    - ./results:/app/results
+    - ./Datasets:/app/Datasets
+    - ./logs:/app/logs
+    depends_on:
+    - semantic_dfl_node_0
+    command: --node_id 9 --host 0.0.0.0 --port 50059 --bootstrap node-0:50050 --rounds
+      10 --config configs/default_config.yaml
+    restart: on-failure

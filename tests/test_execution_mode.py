@@ -201,3 +201,73 @@ def test_coordinator_lifecycle_with_factory_transports(dummy_dataset):
 
     for c in clients.values():
         assert c.transport.is_running is False
+
+
+def test_docker_compose_generator_basic(tmp_path):
+    from scripts.generate_compose import (
+        generate_compose_dict,
+        generate_compose_yaml,
+        save_compose_file,
+    )
+
+    compose_dict = generate_compose_dict(num_nodes=4, base_port=50050, rounds=5)
+    assert compose_dict["version"] == "3.8"
+    assert "semantic_dfl_net" in compose_dict["networks"]
+    assert len(compose_dict["services"]) == 4
+
+    # Node 0 check
+    node0 = compose_dict["services"]["semantic_dfl_node_0"]
+    assert node0["container_name"] == "semantic_dfl_node_0"
+    assert node0["hostname"] == "node-0"
+    assert "--is_super_peer" in node0["command"]
+    assert node0["environment"]["PYTHONUNBUFFERED"] == "1"
+    assert node0["environment"]["NODE_ID"] == "0"
+    assert "50050:50050" in node0["ports"]
+    assert "depends_on" not in node0
+
+    # Node 1 check
+    node1 = compose_dict["services"]["semantic_dfl_node_1"]
+    assert node1["container_name"] == "semantic_dfl_node_1"
+    assert node1["hostname"] == "node-1"
+    assert "--bootstrap node-0:50050" in node1["command"]
+    assert node1["depends_on"] == ["semantic_dfl_node_0"]
+    assert "50051:50051" in node1["ports"]
+    assert node1["environment"]["NODE_ID"] == "1"
+
+    # YAML serialization check
+    yaml_str = generate_compose_yaml(num_nodes=3)
+    parsed = yaml.safe_load(yaml_str)
+    assert len(parsed["services"]) == 3
+
+    # File save check
+    target_path = tmp_path / "test-compose.yml"
+    saved_path = save_compose_file(str(target_path), num_nodes=2)
+    assert os.path.exists(saved_path)
+    with open(saved_path, "r", encoding="utf-8") as f:
+        loaded = yaml.safe_load(f)
+    assert len(loaded["services"]) == 2
+
+
+def test_docker_compose_generator_invalid_nodes():
+    from scripts.generate_compose import generate_compose_dict
+
+    with pytest.raises(ValueError, match="num_nodes must be at least 1"):
+        generate_compose_dict(num_nodes=0)
+
+
+def test_default_docker_compose_file_validity():
+    compose_path = os.path.join(os.path.dirname(__file__), "..", "docker-compose.yml")
+    assert os.path.exists(compose_path)
+
+    with open(compose_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    assert config["version"] == "3.8"
+    assert "semantic_dfl_net" in config["networks"]
+    services = config["services"]
+    assert len(services) == 10
+    for i in range(10):
+        sname = f"semantic_dfl_node_{i}"
+        assert sname in services
+        assert services[sname]["environment"]["PYTHONUNBUFFERED"] == "1"
+
