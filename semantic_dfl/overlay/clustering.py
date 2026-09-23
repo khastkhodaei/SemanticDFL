@@ -154,6 +154,15 @@ class ZoneClustering:
                 if cand != exemplar_id and len(replica_set) < self.r_replicas:
                     replica_set.append(cand)
 
+            # If cluster has fewer members than r_replicas, backfill from other zone members (Section 3.7)
+            if len(replica_set) < min(self.r_replicas, len(valid_members)):
+                other_members = [m for m in valid_members if m not in replica_set]
+                other_sims = [(m, sparse_cosine_similarity(signatures[m], prototype)) for m in other_members]
+                other_sims.sort(key=lambda x: x[1], reverse=True)
+                for cand, _ in other_sims:
+                    if len(replica_set) < self.r_replicas:
+                        replica_set.append(cand)
+
             cid = f"z{zone_id}_c{cluster_idx}"
             clusters[cid] = ClusterDescriptor(
                 cluster_id=cid,

@@ -40,6 +40,10 @@ from semantic_dfl.data.partitioning import (
 from semantic_dfl.federated.client import DFLClient
 from semantic_dfl.federated.coordinator import SemanticDFLCoordinator
 from semantic_dfl.overlay.son import SemanticOverlayNetwork
+from semantic_dfl.overlay.topology import (
+    build_network_topology,
+    compute_average_degree,
+)
 from semantic_dfl.overlay.zone import ZoneManager
 from semantic_dfl.transport.factory import create_transport
 from semantic_dfl.visualization.plotter import generate_all_plots
@@ -205,6 +209,20 @@ def run_in_memory_simulation(
         )
         clients[client_id] = client
 
+    net_cfg = config.get("network", {})
+    topology_type = net_cfg.get("topology") or fed_cfg.get("topology", "ring")
+    topology_degree = net_cfg.get("degree") or fed_cfg.get("degree", 4)
+    topology_seed = sim_cfg.get("seed", 42)
+
+    # Build physical network topology
+    adjacency_graph = build_network_topology(
+        topology_type=topology_type,
+        num_nodes=num_clients,
+        degree=topology_degree,
+        seed=topology_seed,
+    )
+    avg_degree = compute_average_degree(adjacency_graph)
+
     zone_manager = ZoneManager(max_zone_size=zone_size, seed=seed)
     son = SemanticOverlayNetwork(zone_manager=zone_manager)
     pull_aggregator = PullAggregator(default_alpha=alpha_personalization)
@@ -212,6 +230,7 @@ def run_in_memory_simulation(
     coordinator = SemanticDFLCoordinator(
         clients=clients,
         k_neighbors=k_neighbors,
+        adjacency_graph=adjacency_graph,
         pull_aggregator=pull_aggregator,
         son=son,
         global_test_loader=test_loader,
@@ -219,6 +238,7 @@ def run_in_memory_simulation(
         verbose=True,
     )
 
+    logger.info(f"Physical Topology: {topology_type.upper()} (Nodes: {num_clients}, Avg Degree: {avg_degree:.2f})")
     round_history: List[Dict[str, Any]] = []
     start_time = time.time()
 
@@ -233,6 +253,9 @@ def run_in_memory_simulation(
             round_history.append(metrics)
 
             timings = metrics.get("timings", {})
+            traffic = metrics.get("traffic", {})
+            roles = metrics.get("role_distribution", {})
+            
             timing_str = (
                 f"[Train: {timings.get('time_local_training', 0.0):.2f}s, "
                 f"Sig: {timings.get('time_signatures', 0.0):.2f}s, "
@@ -241,16 +264,28 @@ def run_in_memory_simulation(
                 f"Agg: {timings.get('time_aggregation', 0.0):.2f}s, "
                 f"Eval: {timings.get('time_evaluation', 0.0):.2f}s]"
             )
+            traffic_str = (
+                f"Traffic: [Ctrl: {traffic.get('control_mb', 0.0):.2f}MB, "
+                f"Data: {traffic.get('data_mb', 0.0):.2f}MB, "
+                f"Total: {traffic.get('total_mb', 0.0):.2f}MB]"
+            )
+            roles_str = (
+                f"Roles: [Init: {roles.get('ZONE_INITIATOR', 0)}, "
+                f"Super: {roles.get('SUPER_PEER', 0)}, "
+                f"Replica: {roles.get('REPLICA_SUPER_PEER', 0)}, "
+                f"Leaf: {roles.get('LEAF_PEER', 0)}]"
+            )
 
             logger.info(
                 f"Round {metrics['round']:3d}/{rounds:3d} | "
                 f"Test Acc: {metrics['avg_test_accuracy']:6.2f}% | "
                 f"Train Loss: {metrics['avg_train_loss']:6.4f} | "
-                f"Test Loss: {metrics['avg_test_loss']:6.4f} | "
                 f"Recall@K: {metrics['avg_recall_at_k']:5.2f} | "
                 f"Card P: {metrics['cardinality_p']:4d} | "
-                f"Time: {round_duration:.2f}s | {timing_str}"
+                f"Time: {round_duration:.2f}s"
             )
+            logger.info(f"  --> {timing_str} | {traffic_str}")
+            logger.info(f"  --> {roles_str}")
 
     total_duration = time.time() - start_time
     logger.info(f"Simulation finished in {total_duration:.2f}s.")

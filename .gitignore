@@ -18,3 +18,9 @@ results/
 .vscode/
 .idea/
 .DS_Store
+
+# Internal Management & Scratch
+.mgmt/
+scratch/
+scratch_*.txt
+

@@ -17,6 +17,12 @@ federated:
   zone_size: 5
   alpha_personalization: 0.67
 
+network:
+  topology: "small_world" # options: "ring" | "small_world" | "geometric" | "grid" | "slices_wan"
+  degree: 6
+  p_rewire: 0.15
+
+
 data:
   dataset: "fmnist"
   partitioner: "dirichlet"

@@ -3,16 +3,17 @@ Decentralized Federated Learning (DFL) Simulation Coordinator.
 
 Orchestrates synchronous/near-synchronous decentralized rounds:
 1. Local SGD client training.
-2. Coordinate-wise Top-P signature extraction.
-3. Periodic Semantic Overlay Network (SON) tree construction.
-4. Hierarchical Top-K similarity search with adaptive threshold adjustment.
-5. Softmax pull-based personalized aggregation and evaluation.
+2. Coordinate-wise Top-P signature extraction with cosine-retention binary search.
+3. Periodic Semantic Overlay Network (SON) tree construction with physical topology awareness.
+4. Hierarchical Top-K similarity search with adaptive threshold adjustment and search stats.
+5. Softmax pull-based personalized aggregation with freshness checking.
+6. Granular academic logging (control/data plane traffic, role distribution, Recall@K, timings).
 """
 
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Set
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -44,6 +45,7 @@ class SemanticDFLCoordinator:
         k_neighbors: int = 3,
         tau_min_fidelity: float = 0.8,
         son_refresh_interval: int = 1,
+        adjacency_graph: Optional[Dict[int, List[int]]] = None,
         pull_aggregator: Optional[PullAggregator] = None,
         son: Optional[SemanticOverlayNetwork] = None,
         global_test_loader: Optional[DataLoader] = None,
@@ -55,6 +57,7 @@ class SemanticDFLCoordinator:
         self.k_neighbors = k_neighbors
         self.tau_min_fidelity = tau_min_fidelity
         self.son_refresh_interval = son_refresh_interval
+        self.adjacency_graph = adjacency_graph
         self.pull_aggregator = pull_aggregator or PullAggregator()
         self.son = son or SemanticOverlayNetwork()
         self.search_engine = SimilaritySearchEngine(son=self.son)
@@ -91,7 +94,7 @@ class SemanticDFLCoordinator:
             epochs_per_round: Local training epochs per client.
             
         Returns:
-            Dictionary containing round metrics (losses, accuracies, recall, cardinality, phase timings).
+            Dictionary containing round metrics (losses, accuracies, recall, cardinality, traffic, timings).
         """
         self.current_round += 1
         num_clients = len(self.clients)
@@ -139,11 +142,17 @@ class SemanticDFLCoordinator:
             print("  [3/5] SON & AP Clustering ...", flush=True)
         t0 = time.perf_counter()
         if (self.current_round - 1) % self.son_refresh_interval == 0:
-            self.son.build_topology(signatures, p=current_p)
+            self.son.build_topology(
+                signatures=signatures,
+                p=current_p,
+                adjacency_graph=self.adjacency_graph,
+                epoch_seed=self.current_round,
+            )
         timings["time_topology"] = time.perf_counter() - t0
+        role_counts = self.son.get_role_distribution()
 
         # ---------------------------------------------------------------------
-        # Step 4: Top-K Peer Search & Personalized Pull Aggregation
+        # Step 4: Top-K Peer Search & Communication Traffic Accounting
         # ---------------------------------------------------------------------
         if self.verbose:
             print("  [4/5] Similarity Search ...", flush=True)
@@ -151,6 +160,7 @@ class SemanticDFLCoordinator:
         selected_neighbors_all = {}
         recalls = []
         avg_taus = []
+        total_control_bytes = 0
 
         search_iter = tqdm(self.clients.items(), desc="Similarity Search", leave=False) if self.verbose else self.clients.items()
         for nid, client in search_iter:
@@ -158,16 +168,18 @@ class SemanticDFLCoordinator:
             avg_taus.append(tau_current)
 
             # Hierarchical search over SON
-            selected_neighbors = self.search_engine.search_peers(
+            selected_neighbors, search_stats = self.search_engine.search_peers(
                 query_node_id=nid,
                 query_signature=signatures[nid],
                 all_signatures=signatures,
                 k=self.k_neighbors,
                 tau=tau_current,
+                return_stats=True,
             )
             selected_neighbors_all[nid] = selected_neighbors
+            total_control_bytes += search_stats.get("control_bytes", 0)
 
-            # Benchmark against centralized oracle
+            # Centralized oracle baseline for Recall@K
             ideal_neighbors = ideal_centralized_top_k(
                 query_node_id=nid,
                 query_signature=signatures[nid],
@@ -175,25 +187,31 @@ class SemanticDFLCoordinator:
                 k=self.k_neighbors,
             )
 
-            # Track Recall@K
             rec = compute_recall_at_k(selected_neighbors, ideal_neighbors, k=self.k_neighbors)
             recalls.append(rec)
 
-            # Adaptive threshold adjustment
-            acceptance_rate = len(selected_neighbors) / float(self.k_neighbors)
+            # Update threshold based on observed acceptance rate in search
+            acceptance_rate = search_stats.get("acceptance_rate", len(selected_neighbors) / float(self.k_neighbors))
             client.threshold_controller.update_threshold(acceptance_rate=acceptance_rate)
         timings["time_search"] = time.perf_counter() - t_search_start
 
-        # Pull neighbor parameter vectors and aggregate
+        # ---------------------------------------------------------------------
+        # Step 5: Pull Aggregation & Data Traffic Accounting
+        # ---------------------------------------------------------------------
         if self.verbose:
             print("  [5/5] Pull Aggregation ...", flush=True)
         t_agg_start = time.perf_counter()
         new_client_weights = {}
+        total_data_bytes = 0
+        m_params = next(iter(all_weights.values())).numel() if all_weights else 0
+        model_bytes_fp32 = m_params * 4
+
         agg_iter = tqdm(self.clients.items(), desc="Pull Aggregation", leave=False) if self.verbose else self.clients.items()
         for nid, client in agg_iter:
             selected_neighbors = selected_neighbors_all[nid]
             neighbor_w = {nbr_id: all_weights[nbr_id] for nbr_id, _ in selected_neighbors}
             neighbor_sims = {nbr_id: sim for nbr_id, sim in selected_neighbors}
+            total_data_bytes += len(neighbor_w) * model_bytes_fp32
 
             new_w = self.pull_aggregator.aggregate(
                 client_weights=all_weights[nid],
@@ -208,7 +226,7 @@ class SemanticDFLCoordinator:
         timings["time_aggregation"] = time.perf_counter() - t_agg_start
 
         # ---------------------------------------------------------------------
-        # Step 5: Test Evaluation
+        # Step 6: Test Evaluation
         # ---------------------------------------------------------------------
         t0 = time.perf_counter()
         test_losses = []
@@ -229,6 +247,10 @@ class SemanticDFLCoordinator:
         avg_recall = float(np.mean(recalls))
         avg_tau = float(np.mean(avg_taus))
 
+        control_mb = total_control_bytes / (1024.0 * 1024.0)
+        data_mb = total_data_bytes / (1024.0 * 1024.0)
+        total_mb = control_mb + data_mb
+
         return {
             "round": self.current_round,
             "cardinality_p": current_p,
@@ -237,5 +259,12 @@ class SemanticDFLCoordinator:
             "avg_test_accuracy": avg_test_acc,
             "avg_recall_at_k": avg_recall,
             "avg_threshold_tau": avg_tau,
+            "role_distribution": role_counts,
+            "traffic": {
+                "control_mb": control_mb,
+                "data_mb": data_mb,
+                "total_mb": total_mb,
+                "per_node_total_mb": total_mb / max(1, num_clients),
+            },
             "timings": timings,
         }
