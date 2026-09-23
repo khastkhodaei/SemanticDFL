@@ -1,14 +1,20 @@
 """
 Neural Network Architectures and Parameter Utilities for SemanticDFL.
 
-This module provides standard deep learning architectures optimized for federated
-and decentralized learning benchmarks (e.g. FashionMNIST, CIFAR-10, MNIST), along with
-clean, robust parameter serialization, flattening, and gradient extraction routines.
+This module provides standard deep learning architectures evaluated across multi-modal
+benchmarks in SemanticDFL (ACM 2026):
+1. Fashion-MNIST: 2-layer CNN (FashionCNN) for 10-class fashion item classification.
+2. Tiny-ImageNet / CIFAR: ResNet-18 adapted for small inputs (ResNet18Small).
+3. Google Speech Commands: ResNet-18 with 1-channel Log-Mel spectrogram input (GoogleSpeechResNet).
+4. 20Newsgroups: Transformer / ALBERT-style text classifier (AlbertTextClassifier).
+
+Along with clean, robust parameter serialization, flattening, and gradient extraction routines.
 """
 
 from __future__ import annotations
 
 import hashlib
+import math
 from typing import Sequence
 
 import torch
@@ -71,7 +77,7 @@ class FashionCNN(nn.Module):
 
 class ResNet18Small(ResNet):
     """
-    ResNet-18 modified for small image resolutions (e.g. 32x32 for CIFAR-10 or 28x28 for FMNIST).
+    ResNet-18 modified for small image resolutions (e.g. 32x32 for CIFAR-10, 64x64 for Tiny-ImageNet).
     
     Standard ResNet-18 uses a 7x7 conv with stride 2 and max pooling, which aggressively
     reduces spatial dimensions of small images. This adaptation uses a 3x3 conv with stride 1
@@ -96,8 +102,104 @@ class ResNet18Small(ResNet):
             padding=1,
             bias=False,
         )
-        # Remove initial maxpool to avoid excessive spatial downsampling on 32x32 images
+        # Remove initial maxpool to avoid excessive spatial downsampling on small images
         self.maxpool = nn.Identity()
+
+
+class GoogleSpeechResNet(ResNet):
+    """
+    ResNet-18 adapted for 1-channel Log-Mel Spectrogram speech classification (Google Speech Commands).
+    
+    Default configuration classifies 35 speech command classes from single-channel spectrograms.
+    """
+
+    def __init__(
+        self,
+        in_channels: int = 1,
+        num_classes: int = 35,
+    ) -> None:
+        super().__init__(block=BasicBlock, layers=[2, 2, 2, 2], num_classes=num_classes)
+        self.in_channels = in_channels
+        self.num_classes = num_classes
+
+        self.conv1 = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=64,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+        )
+        self.maxpool = nn.Identity()
+
+
+class AlbertTextClassifier(nn.Module):
+    """
+    Lightweight Transformer Text Classifier for 20Newsgroups text categorization.
+    
+    Architecture:
+        - Embedding(vocab_size, embed_dim) + Positional Encoding
+        - TransformerEncoderLayer (multi-head self-attention + feed-forward)
+        - Mean/Cls pooling
+        - Linear(embed_dim, hidden_dim) -> ReLU -> Dropout
+        - Linear(hidden_dim, num_classes)
+    """
+
+    def __init__(
+        self,
+        vocab_size: int = 30000,
+        embed_dim: int = 128,
+        num_heads: int = 4,
+        hidden_dim: int = 256,
+        num_layers: int = 2,
+        num_classes: int = 20,
+        max_seq_len: int = 256,
+        dropout: float = 0.1,
+    ) -> None:
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.embed_dim = embed_dim
+        self.num_classes = num_classes
+        self.max_seq_len = max_seq_len
+
+        self.token_embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.pos_embedding = nn.Embedding(max_seq_len, embed_dim)
+
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embed_dim,
+            nhead=num_heads,
+            dim_feedforward=hidden_dim,
+            dropout=dropout,
+            batch_first=True,
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.fc1 = nn.Linear(embed_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+        self.fc2 = nn.Linear(hidden_dim, num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass.
+        Args:
+            x: Input token indices tensor of shape (batch_size, seq_len)
+        Returns:
+            Unnormalized logits of shape (batch_size, num_classes)
+        """
+        if x.dim() == 1:
+            x = x.unsqueeze(0)
+        batch_size, seq_len = x.shape
+        seq_len = min(seq_len, self.max_seq_len)
+        x = x[:, :seq_len]
+
+        positions = torch.arange(seq_len, device=x.device).unsqueeze(0).expand(batch_size, -1)
+        h = self.token_embedding(x) + self.pos_embedding(positions)
+        encoded = self.transformer(h)
+
+        # Global average pooling over token sequence
+        pooled = encoded.mean(dim=1)
+        out = F.relu(self.fc1(pooled))
+        out = self.dropout(out)
+        return self.fc2(out)
 
 
 class MLP2NN(nn.Module):
@@ -130,6 +232,48 @@ class MLP2NN(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
+
+
+def build_model(
+    model_name: str = "fashion_cnn",
+    num_classes: int = 10,
+    in_channels: int | None = None,
+    **kwargs,
+) -> nn.Module:
+    """
+    Factory function for instantiating model architectures evaluated in SemanticDFL.
+    
+    Args:
+        model_name: Name of model ('fashion_cnn', 'fmnist_cnn', 'resnet18_small',
+                    'tiny_imagenet', 'cifar10_resnet', 'google_speech', 'speech_resnet',
+                    'albert', '20newsgroups', 'mlp2nn').
+        num_classes: Number of output target classes.
+        in_channels: Input channels (optional override).
+        
+    Returns:
+        Instantiated nn.Module instance.
+    """
+    name = model_name.strip().lower()
+    if name in ("fashion_cnn", "fashioncnn", "fmnist_cnn", "cnn"):
+        ch = in_channels if in_channels is not None else 1
+        return FashionCNN(in_channels=ch, num_classes=num_classes, **kwargs)
+    elif name in ("resnet18_small", "resnet18", "tiny_imagenet", "cifar10_resnet", "cifar_resnet"):
+        ch = in_channels if in_channels is not None else 3
+        return ResNet18Small(in_channels=ch, num_classes=num_classes)
+    elif name in ("google_speech", "google_speech_resnet", "speech_resnet", "speech"):
+        ch = in_channels if in_channels is not None else 1
+        n_cls = num_classes if num_classes != 10 else 35
+        return GoogleSpeechResNet(in_channels=ch, num_classes=n_cls)
+    elif name in ("albert", "albert_text", "20newsgroups", "newsgroups", "transformer_text"):
+        n_cls = num_classes if num_classes != 10 else 20
+        return AlbertTextClassifier(num_classes=n_cls, **kwargs)
+    elif name in ("mlp2nn", "2nn", "mlp"):
+        input_dim = kwargs.get("input_dim", 784)
+        return MLP2NN(input_dim=input_dim, num_classes=num_classes)
+    else:
+        # Default to FashionCNN
+        ch = in_channels if in_channels is not None else 1
+        return FashionCNN(in_channels=ch, num_classes=num_classes)
 
 
 # -----------------------------------------------------------------------------

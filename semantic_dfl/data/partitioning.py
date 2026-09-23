@@ -3,12 +3,13 @@ Data Partitioning Algorithms for Federated and Decentralized Learning.
 
 Provides robust, reproducible IID and Non-IID partitioning strategies:
 1. DirichletPartitioner: Simulates label distribution skew via Dirichlet distribution Dir(alpha).
-2. PathologicalPartitioner: Strict class-quota (shard) partitioner where each client only observes K classes.
+2. PathologicalPartitioner: Strict class-quota (shard) partitioner where each client only observes K classes or a fraction (e.g. 20% or 30%) of classes.
 3. IIDPartitioner: Uniform balanced random partitioning.
 """
 
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from typing import Sequence
 import numpy as np
@@ -130,18 +131,23 @@ class PathologicalPartitioner(BasePartitioner):
     """
     Pathological Non-IID Partitioner (Class-Quota / Shard Splitting).
     
-    Each client receives samples from only a restricted subset of classes (e.g. 2 classes).
-    Classic federated learning benchmark scenario from McMahan et al.
+    Each client receives samples from only a restricted subset of classes (e.g. 2 classes or 20% of total classes).
+    Supports either explicit integer `classes_per_client` or a float ratio `classes_fraction` in (0, 1].
     """
 
     def __init__(
         self,
-        classes_per_client: int = 2,
+        classes_per_client: int | None = 2,
+        classes_fraction: float | None = None,
         seed: int | None = 42,
     ) -> None:
-        if classes_per_client <= 0:
+        if classes_per_client is not None and classes_per_client <= 0:
             raise ValueError(f"classes_per_client must be >= 1, got {classes_per_client}")
+        if classes_fraction is not None and not (0.0 < classes_fraction <= 1.0):
+            raise ValueError(f"classes_fraction must be in (0, 1], got {classes_fraction}")
+            
         self.classes_per_client = classes_per_client
+        self.classes_fraction = classes_fraction
         self.seed = seed
 
     def partition(
@@ -159,7 +165,13 @@ class PathologicalPartitioner(BasePartitioner):
 
         unique_classes = np.unique(targets_np)
         num_classes = len(unique_classes)
-        k = min(self.classes_per_client, num_classes)
+        
+        if self.classes_fraction is not None:
+            k = max(1, int(math.ceil(self.classes_fraction * num_classes)))
+        elif self.classes_per_client is not None:
+            k = min(self.classes_per_client, num_classes)
+        else:
+            k = 2
 
         rng = np.random.default_rng(self.seed)
 
@@ -219,3 +231,31 @@ class IIDPartitioner(BasePartitioner):
 
         splits = np.array_split(indices, num_clients)
         return {i: splits[i].tolist() for i in range(num_clients)}
+
+
+def build_partitioner(
+    partition_type: str = "dirichlet",
+    alpha: float = 0.5,
+    classes_per_client: int | None = None,
+    classes_fraction: float | None = None,
+    seed: int = 42,
+    **kwargs,
+) -> BasePartitioner:
+    """
+    Factory constructor for federated dataset partitioners.
+    
+    Supported types: 'dirichlet', 'non_iid_dirichlet', 'pathological', 'shard', 'iid'.
+    """
+    ptype = partition_type.strip().lower()
+    if ptype in ("dirichlet", "non_iid", "dir", "alpha"):
+        return DirichletPartitioner(alpha=alpha, seed=seed, **kwargs)
+    elif ptype in ("pathological", "shard", "class_quota", "pathology"):
+        return PathologicalPartitioner(
+            classes_per_client=classes_per_client or 2 if classes_fraction is None else None,
+            classes_fraction=classes_fraction,
+            seed=seed,
+        )
+    elif ptype in ("iid", "uniform", "balanced"):
+        return IIDPartitioner(seed=seed)
+    else:
+        return DirichletPartitioner(alpha=alpha, seed=seed)
