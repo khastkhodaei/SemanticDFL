@@ -8,10 +8,12 @@ Orchestrates synchronous/near-synchronous decentralized rounds:
 4. Hierarchical Top-K similarity search with adaptive threshold adjustment and search stats.
 5. Softmax pull-based personalized aggregation with freshness checking.
 6. Granular academic logging (control/data plane traffic, role distribution, Recall@K, timings).
+7. Per-node role state ledger and execution telemetry exports.
 """
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Any, Dict, List, Optional, Set
 import numpy as np
@@ -30,6 +32,10 @@ from semantic_dfl.search.engine import (
 from semantic_dfl.signature.binary_search import (
     compute_network_p,
     find_minimal_cardinality,
+)
+from semantic_dfl.utils.logger import (
+    save_node_lifecycle_history,
+    save_round_node_roles,
 )
 
 
@@ -51,6 +57,8 @@ class SemanticDFLCoordinator:
         global_test_loader: Optional[DataLoader] = None,
         device: Optional[torch.device] = None,
         verbose: bool = False,
+        results_dir: str = "results",
+        export_node_states: bool = True,
     ) -> None:
         self.clients = clients
         self.p_cardinality = p_cardinality
@@ -64,7 +72,10 @@ class SemanticDFLCoordinator:
         self.global_test_loader = global_test_loader
         self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         self.verbose = verbose
+        self.results_dir = results_dir
+        self.export_node_states = export_node_states
         self.current_round = 0
+        self.node_lifecycle_history: List[Dict[str, Any]] = []
 
     def start(self) -> None:
         """Starts underlying client transport adapters and initializes round-0 weights."""
@@ -88,13 +99,8 @@ class SemanticDFLCoordinator:
 
     def step_round(self, epochs_per_round: int = 1) -> Dict[str, Any]:
         """
-        Executes one full decentralized learning round with granular phase timers and progress tracking.
-        
-        Args:
-            epochs_per_round: Local training epochs per client.
-            
-        Returns:
-            Dictionary containing round metrics (losses, accuracies, recall, cardinality, traffic, timings).
+        Executes one full decentralized learning round with granular phase timers,
+        progress tracking, and structured per-node role state ledger recording.
         """
         self.current_round += 1
         num_clients = len(self.clients)
@@ -130,9 +136,12 @@ class SemanticDFLCoordinator:
             current_p = self.p_cardinality
 
         signatures = {}
+        sig_norms = {}
         sig_iter = tqdm(self.clients.items(), desc="Extracting Signatures", leave=False) if self.verbose else self.clients.items()
         for nid, client in sig_iter:
-            signatures[nid] = client.extract_signature(p=current_p, round_num=self.current_round)
+            sig = client.extract_signature(p=current_p, round_num=self.current_round)
+            signatures[nid] = sig
+            sig_norms[nid] = float(torch.norm(sig).item())
         timings["time_signatures"] = time.perf_counter() - t0
 
         # ---------------------------------------------------------------------
@@ -226,24 +235,74 @@ class SemanticDFLCoordinator:
         timings["time_aggregation"] = time.perf_counter() - t_agg_start
 
         # ---------------------------------------------------------------------
-        # Step 6: Test Evaluation
+        # Step 6: Test Evaluation & Per-Node Role State Ledger Construction
         # ---------------------------------------------------------------------
         t0 = time.perf_counter()
-        test_losses = []
-        test_accuracies = []
+        test_losses = {}
+        test_accuracies = {}
 
         eval_iter = tqdm(self.clients.items(), desc="Evaluating Clients", leave=False) if self.verbose else self.clients.items()
         for nid, client in eval_iter:
             eval_loader = self.global_test_loader if self.global_test_loader is not None else client.test_loader
             if eval_loader is not None:
                 loss, acc = client.evaluate(eval_loader)
-                test_losses.append(loss)
-                test_accuracies.append(acc)
+                test_losses[nid] = loss
+                test_accuracies[nid] = acc
+            else:
+                test_losses[nid] = 0.0
+                test_accuracies[nid] = 0.0
         timings["time_evaluation"] = time.perf_counter() - t0
 
+        # Construct structured per-node role state ledger
+        node_states: Dict[int, Dict[str, Any]] = {}
+        for nid, client in self.clients.items():
+            meta = self.son.get_peer_metadata(nid)
+            roles_list = [r.value for r in meta.roles] if meta else ["LEAF_PEER"]
+            zone_id = meta.zone_id if meta else None
+            level = meta.level if meta else 1
+
+            nbrs_data = [
+                {"neighbor_id": int(nbr_id), "similarity": float(sim)}
+                for nbr_id, sim in selected_neighbors_all.get(nid, [])
+            ]
+
+            node_states[nid] = {
+                "node_id": nid,
+                "roles": roles_list,
+                "zone_id": zone_id,
+                "level": level,
+                "train_loss": float(train_losses.get(nid, 0.0)),
+                "test_loss": float(test_losses.get(nid, 0.0)),
+                "test_accuracy": float(test_accuracies.get(nid, 0.0)),
+                "signature_p": int(current_p),
+                "signature_norm": float(sig_norms.get(nid, 0.0)),
+                "threshold_tau": float(client.threshold_controller.tau),
+                "selected_neighbors": nbrs_data,
+            }
+
+        # Export per-round state ledger JSON
+        if self.export_node_states:
+            save_round_node_roles(
+                round_num=self.current_round,
+                node_states=node_states,
+                output_dir=self.results_dir,
+            )
+            round_summary = {
+                "round": self.current_round,
+                "role_distribution": role_counts,
+                "avg_train_loss": float(np.mean(list(train_losses.values()))),
+                "avg_test_accuracy": float(np.mean(list(test_accuracies.values()))) if test_accuracies else 0.0,
+                "node_states": node_states,
+            }
+            self.node_lifecycle_history.append(round_summary)
+            save_node_lifecycle_history(
+                history=self.node_lifecycle_history,
+                output_dir=self.results_dir,
+            )
+
         avg_train_loss = float(np.mean(list(train_losses.values())))
-        avg_test_loss = float(np.mean(test_losses)) if test_losses else 0.0
-        avg_test_acc = float(np.mean(test_accuracies)) if test_accuracies else 0.0
+        avg_test_loss = float(np.mean(list(test_losses.values()))) if test_losses else 0.0
+        avg_test_acc = float(np.mean(list(test_accuracies.values()))) if test_accuracies else 0.0
         avg_recall = float(np.mean(recalls))
         avg_tau = float(np.mean(avg_taus))
 
@@ -267,4 +326,5 @@ class SemanticDFLCoordinator:
                 "per_node_total_mb": total_mb / max(1, num_clients),
             },
             "timings": timings,
+            "node_states": node_states,
         }
