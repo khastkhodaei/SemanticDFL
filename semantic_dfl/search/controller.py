@@ -18,7 +18,7 @@ class AdaptiveThresholdController:
         - phi is the target peer acceptance rate in (0, 1)
         - eta_tau is the learning rate step size
         - gamma is the drift compensation slack
-        - drift_proxy in [0, 1] captures local model trajectory alignment (e.g. cosine of successive rounds)
+        - drift_proxy in [0, 1] captures local model trajectory alignment: rho_i^(t) = cos(u_i^(t), u_i^(t-1))
     """
 
     def __init__(
@@ -27,7 +27,7 @@ class AdaptiveThresholdController:
         phi: float = 0.5,
         eta_tau: float = 0.05,
         gamma: float = 0.02,
-        relax_delta: float = 0.05,
+        relax_delta: float = 0.02,
         tau_min_clip: float = -1.0,
         tau_max_clip: float = 1.0,
     ) -> None:
@@ -71,7 +71,7 @@ class AdaptiveThresholdController:
         Relaxes (decreases) the threshold when insufficient candidate peers (< K) are discovered.
         
         Args:
-            delta: Optional custom relaxation step (defaults to self.relax_delta).
+            delta: Optional custom relaxation step (defaults to self.relax_delta = 0.02).
             
         Returns:
             Relaxed threshold.

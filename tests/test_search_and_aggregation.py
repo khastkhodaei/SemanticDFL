@@ -52,6 +52,10 @@ class TestAdaptiveThresholdController:
         relaxed = ctrl.relax_threshold()
         assert pytest.approx(relaxed, abs=1e-5) == 0.5
 
+        ctrl_default = AdaptiveThresholdController(tau_0=0.5)
+        relaxed_default = ctrl_default.relax_threshold()
+        assert pytest.approx(relaxed_default, abs=1e-5) == 0.48
+
 
 class TestSimilaritySearchEngine:
     """Tests for hierarchical SON top-down search and Recall@K."""
