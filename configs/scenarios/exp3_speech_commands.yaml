@@ -1,0 +1,49 @@
+# ==============================================================================
+# Scenario 3: Google Speech Commands (35 Classes, Audio Log-Mel Spectrograms)
+# Paper: Dogani, Khastkhodaei, Khunjush, Laoutaris (POMACS / ACM SIGMETRICS 2026)
+# ==============================================================================
+
+execution:
+  mode: "simulation"
+  backend: "memory"
+
+simulation:
+  rounds: 50
+  seed: 42
+  device: "auto"
+
+seeds:
+  topology_seed: 42
+  data_seed: 42
+  vrf_seed: 42
+  model_seed: 42
+
+federated:
+  num_clients: 100
+  k_neighbors: 10
+  zone_size: 5
+  alpha_personalization: 0.67
+
+network:
+  topology: "small_world"
+  degree: 6
+  p_rewire: 0.15
+  dynamic_topology: false
+
+data:
+  dataset: "speech_commands"
+  partitioner: "dirichlet"
+  alpha: 0.3
+  batch_size: 32
+  data_dir: "./Datasets"
+
+model:
+  architecture: "GoogleSpeechResNet"
+  local_epochs: 1
+  learning_rate: 0.01
+
+logging:
+  save_results_json: true
+  detailed_client_metrics: true
+  generate_plots: true
+  output_dir: "results/scenarios/exp3_speech_commands"

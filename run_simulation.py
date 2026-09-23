@@ -92,7 +92,7 @@ def create_model_factory(architecture: str, dataset_name: str):
         return lambda: ResNet18Small(in_channels=in_channels, num_classes=num_classes)
     elif arch in ("GoogleSpeechResNet", "SpeechResNet", "speech_resnet", "speech"):
         return lambda: GoogleSpeechResNet(in_channels=1, num_classes=35)
-    elif arch in ("AlbertTextClassifier", "Albert", "TextClassifier", "20newsgroups"):
+    elif arch in ("AlbertTextClassifier", "Albert", "TextClassifier", "20newsgroups", "ag_news", "agnews", "ag-news"):
         return lambda: AlbertTextClassifier(num_classes=20)
     else:
         return lambda: build_model(model_name=arch, in_channels=in_channels)

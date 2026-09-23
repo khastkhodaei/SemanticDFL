@@ -152,7 +152,7 @@ def get_dataset(
         return get_tiny_imagenet(root=os.path.join(root, "tiny_imagenet"), **kwargs)
     elif name in ("google_speech", "speech_commands", "speech"):
         return get_google_speech_commands(root=os.path.join(root, "speech_commands"), **kwargs)
-    elif name in ("20newsgroups", "newsgroups", "news20", "text"):
+    elif name in ("20newsgroups", "newsgroups", "news20", "text", "ag_news", "agnews", "ag-news"):
         return get_20newsgroups(root=os.path.join(root, "20newsgroups"), **kwargs)
     else:
         return get_fashion_mnist(root=os.path.join(root, "fmnist"), download=download)

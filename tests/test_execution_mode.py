@@ -271,3 +271,58 @@ def test_default_docker_compose_file_validity():
         assert sname in services
         assert services[sname]["environment"]["PYTHONUNBUFFERED"] == "1"
 
+
+def test_scenario_presets_schema_and_models():
+    scenarios_dir = os.path.join(os.path.dirname(__file__), "..", "configs", "scenarios")
+    assert os.path.exists(scenarios_dir)
+
+    from scripts.run_paper_benchmarks import list_available_scenarios
+    scenarios = list_available_scenarios(scenarios_dir)
+    expected = [
+        "exp1_fmnist_dirichlet",
+        "exp2_cifar10_pathological",
+        "exp3_speech_commands",
+        "exp4_ag_news_text",
+        "exp5_slices_wan",
+    ]
+    for sc in expected:
+        assert sc in scenarios
+
+    for sc in expected:
+        path = os.path.join(scenarios_dir, f"{sc}.yaml")
+        assert os.path.exists(path)
+        with open(path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        assert "execution" in cfg
+        assert "simulation" in cfg
+        assert "federated" in cfg
+        assert "data" in cfg
+        assert "model" in cfg
+
+        # Verify model factory instantiates valid model
+        arch = cfg["model"]["architecture"]
+        dataset_name = cfg["data"]["dataset"]
+        factory = create_model_factory(arch, dataset_name)
+        model = factory()
+        assert isinstance(model, torch.nn.Module)
+
+
+def test_paper_benchmark_runner_fast_smoke(tmp_path):
+    from scripts.run_paper_benchmarks import run_single_benchmark
+
+    scenarios_dir = os.path.join(os.path.dirname(__file__), "..", "configs", "scenarios")
+    result = run_single_benchmark(
+        scenario_name="exp1_fmnist_dirichlet",
+        rounds=1,
+        num_clients=2,
+        scenarios_dir=scenarios_dir,
+        device="cpu",
+    )
+    assert result["scenario"] == "exp1_fmnist_dirichlet"
+    assert result["rounds_executed"] == 1
+    assert result["num_clients"] == 2
+    assert "mean_accuracy" in result
+    assert "results_data" in result
+
+
