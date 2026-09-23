@@ -1,5 +1,5 @@
 """
-Semantic Overlay Network (SON), Clustering, and Zone Management.
+Semantic Overlay Network (SON), Clustering, Topology, and Multi-Hop Routing.
 """
 
 from semantic_dfl.overlay.clustering import ZoneClustering
@@ -9,6 +9,7 @@ from semantic_dfl.overlay.descriptors import (
     PeerRole,
     ZoneDescriptor,
 )
+from semantic_dfl.overlay.routing import MultiHopRouter
 from semantic_dfl.overlay.son import SemanticOverlayNetwork
 from semantic_dfl.overlay.topology import (
     build_network_topology,
@@ -30,6 +31,7 @@ __all__ = [
     "ZoneClustering",
     "ZoneManager",
     "SemanticOverlayNetwork",
+    "MultiHopRouter",
     "build_network_topology",
     "generate_ring_topology",
     "generate_small_world_topology",
@@ -39,4 +41,3 @@ __all__ = [
     "compute_r_hop_neighborhood",
     "compute_average_degree",
 ]
-

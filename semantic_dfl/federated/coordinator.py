@@ -6,9 +6,10 @@ Orchestrates synchronous/near-synchronous decentralized rounds:
 2. Coordinate-wise Top-P signature extraction with cosine-retention binary search.
 3. Periodic Semantic Overlay Network (SON) tree construction with physical topology awareness.
 4. Hierarchical Top-K similarity search with adaptive threshold adjustment and search stats.
-5. Softmax pull-based personalized aggregation with freshness checking.
-6. Granular academic logging (control/data plane traffic, role distribution, Recall@K, timings).
-7. Per-node role state ledger and execution telemetry exports.
+5. Multi-hop packet routing and forwarding auditing over physical underlay graph.
+6. Softmax pull-based personalized aggregation with freshness checking.
+7. Granular academic logging (control/data plane traffic, role distribution, Recall@K, timings).
+8. Per-node role state ledger and routing audit JSON exports.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from tqdm import tqdm
 
 from semantic_dfl.aggregation.pull_aggregator import PullAggregator
 from semantic_dfl.federated.client import DFLClient
+from semantic_dfl.overlay.routing import MultiHopRouter
 from semantic_dfl.overlay.son import SemanticOverlayNetwork
 from semantic_dfl.search.engine import (
     SimilaritySearchEngine,
@@ -68,6 +70,7 @@ class SemanticDFLCoordinator:
         self.adjacency_graph = adjacency_graph
         self.pull_aggregator = pull_aggregator or PullAggregator()
         self.son = son or SemanticOverlayNetwork()
+        self.router = MultiHopRouter(adjacency_graph=adjacency_graph)
         self.search_engine = SimilaritySearchEngine(son=self.son)
         self.global_test_loader = global_test_loader
         self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
@@ -100,7 +103,7 @@ class SemanticDFLCoordinator:
     def step_round(self, epochs_per_round: int = 1) -> Dict[str, Any]:
         """
         Executes one full decentralized learning round with granular phase timers,
-        progress tracking, and structured per-node role state ledger recording.
+        progress tracking, multi-hop routing audits, and structured telemetry exports.
         """
         self.current_round += 1
         num_clients = len(self.clients)
@@ -205,15 +208,16 @@ class SemanticDFLCoordinator:
         timings["time_search"] = time.perf_counter() - t_search_start
 
         # ---------------------------------------------------------------------
-        # Step 5: Pull Aggregation & Data Traffic Accounting
+        # Step 5: Multi-Hop Routing, Pull Aggregation & Data Traffic Accounting
         # ---------------------------------------------------------------------
         if self.verbose:
-            print("  [5/5] Pull Aggregation ...", flush=True)
+            print("  [5/5] Pull Aggregation & Multi-Hop Routing ...", flush=True)
         t_agg_start = time.perf_counter()
         new_client_weights = {}
         total_data_bytes = 0
         m_params = next(iter(all_weights.values())).numel() if all_weights else 0
         model_bytes_fp32 = m_params * 4
+        routing_transactions: List[Dict[str, Any]] = []
 
         agg_iter = tqdm(self.clients.items(), desc="Pull Aggregation", leave=False) if self.verbose else self.clients.items()
         for nid, client in agg_iter:
@@ -221,6 +225,17 @@ class SemanticDFLCoordinator:
             neighbor_w = {nbr_id: all_weights[nbr_id] for nbr_id, _ in selected_neighbors}
             neighbor_sims = {nbr_id: sim for nbr_id, sim in selected_neighbors}
             total_data_bytes += len(neighbor_w) * model_bytes_fp32
+
+            # Route model pull packets hop-by-hop along physical graph
+            for nbr_id, _ in selected_neighbors:
+                if nbr_id != nid:
+                    tx_record = self.router.route_packet(
+                        src=nid,
+                        dst=nbr_id,
+                        packet_type="MODEL_PULL",
+                        payload_bytes=model_bytes_fp32,
+                    )
+                    routing_transactions.append(tx_record)
 
             new_w = self.pull_aggregator.aggregate(
                 client_weights=all_weights[nid],
@@ -233,6 +248,14 @@ class SemanticDFLCoordinator:
         for nid, client in self.clients.items():
             client.set_weights(new_client_weights[nid], round_num=self.current_round)
         timings["time_aggregation"] = time.perf_counter() - t_agg_start
+
+        # Export routing audit
+        if self.export_node_states:
+            self.router.export_routing_audit(
+                round_num=self.current_round,
+                transactions=routing_transactions,
+                output_dir=self.results_dir,
+            )
 
         # ---------------------------------------------------------------------
         # Step 6: Test Evaluation & Per-Node Role State Ledger Construction
@@ -310,6 +333,10 @@ class SemanticDFLCoordinator:
         data_mb = total_data_bytes / (1024.0 * 1024.0)
         total_mb = control_mb + data_mb
 
+        total_hops = sum(t.get("hop_count", 0) for t in routing_transactions)
+        avg_hops = total_hops / float(max(1, len(routing_transactions)))
+        max_hops = max((t.get("hop_count", 0) for t in routing_transactions), default=0)
+
         return {
             "round": self.current_round,
             "cardinality_p": current_p,
@@ -324,6 +351,12 @@ class SemanticDFLCoordinator:
                 "data_mb": data_mb,
                 "total_mb": total_mb,
                 "per_node_total_mb": total_mb / max(1, num_clients),
+            },
+            "routing": {
+                "total_transactions": len(routing_transactions),
+                "total_hops": total_hops,
+                "avg_hops_per_pull": float(avg_hops),
+                "max_hops_per_pull": int(max_hops),
             },
             "timings": timings,
             "node_states": node_states,
