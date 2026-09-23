@@ -6,11 +6,12 @@ Implements Section 2.1, Section 3.6, and Appendix E.3 of the SemanticDFL framewo
 2. Applies Freshness Guard sim(u_i^(t), u_j^(t')) >= T_fresh for delayed neighbor replies.
 3. Forms a collaborative semantic neighbor anchor m_i^(t).
 4. Interpolates local client weights with anchor using personalization coefficient alpha_i = (eta * psi_i) / (1 + eta * psi_i).
+5. Provides data-plane traffic accounting for 32-bit float model parameter transfer (4 * M bytes per pull).
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
 import torch
 import torch.nn.functional as F
 
@@ -29,6 +30,15 @@ def compute_alpha_from_psi(psi: float = 2.0, eta: float = 1.0) -> float:
     if psi < 0.0:
         raise ValueError(f"Personalization coupling strength psi must be >= 0, got {psi}")
     return float((eta * psi) / (1.0 + eta * psi))
+
+
+def compute_data_plane_traffic_bytes(num_pulled_models: int, num_params: int) -> int:
+    """
+    Computes data-plane communication traffic incurred during model pull phase:
+        Traffic = 4 * num_params * num_pulled_models (bytes)
+    assuming standard 32-bit (4-byte) IEEE 754 float weights.
+    """
+    return int(4 * max(0, num_params) * max(0, num_pulled_models))
 
 
 class PullAggregator:

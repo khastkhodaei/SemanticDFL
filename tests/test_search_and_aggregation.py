@@ -8,7 +8,15 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 
-from semantic_dfl.core.models import MLP2NN, FashionCNN
+from semantic_dfl.core.models import (
+    FashionCNN,
+    ResNet18Small,
+    GoogleSpeechResNet,
+    AlbertTextClassifier,
+    MLP2NN,
+    get_flattened_params,
+    set_flattened_params,
+)
 from semantic_dfl.overlay.clustering import ZoneClustering
 from semantic_dfl.overlay.son import SemanticOverlayNetwork
 from semantic_dfl.overlay.zone import ZoneManager
@@ -18,7 +26,11 @@ from semantic_dfl.search.engine import (
     compute_recall_at_k,
     ideal_centralized_top_k,
 )
-from semantic_dfl.aggregation.pull_aggregator import PullAggregator
+from semantic_dfl.aggregation.pull_aggregator import (
+    PullAggregator,
+    compute_alpha_from_psi,
+    compute_data_plane_traffic_bytes,
+)
 from semantic_dfl.federated.client import DFLClient
 from semantic_dfl.federated.coordinator import SemanticDFLCoordinator
 
@@ -28,21 +40,18 @@ class TestAdaptiveThresholdController:
 
     def test_threshold_increase_on_high_acceptance(self):
         ctrl = AdaptiveThresholdController(tau_0=0.5, phi=0.5, eta_tau=0.1)
-        # 100% acceptance rate > 0.5 target phi -> threshold should increase
         new_tau = ctrl.update_threshold(acceptance_rate=1.0, drift_proxy=1.0)
         assert new_tau > 0.5
         assert pytest.approx(new_tau, abs=1e-5) == 0.5 + 0.1 * (1.0 - 0.5)
 
     def test_threshold_decrease_on_low_acceptance(self):
         ctrl = AdaptiveThresholdController(tau_0=0.5, phi=0.5, eta_tau=0.1)
-        # 0% acceptance rate < 0.5 -> threshold should decrease
         new_tau = ctrl.update_threshold(acceptance_rate=0.0, drift_proxy=1.0)
         assert new_tau < 0.5
         assert pytest.approx(new_tau, abs=1e-5) == 0.5 + 0.1 * (0.0 - 0.5)
 
     def test_threshold_drift_compensation(self):
         ctrl = AdaptiveThresholdController(tau_0=0.5, phi=0.5, eta_tau=0.1, gamma=0.05)
-        # Acceptance matches phi (no rate delta), but drift is high (drift_proxy = 0.0)
         new_tau = ctrl.update_threshold(acceptance_rate=0.5, drift_proxy=0.0)
         assert new_tau < 0.5
         assert pytest.approx(new_tau, abs=1e-5) == 0.5 - 0.05 * 1.0
@@ -61,7 +70,6 @@ class TestSimilaritySearchEngine:
     """Tests for hierarchical SON top-down search and Recall@K."""
 
     def test_search_engine_dimension_mismatch_resilience(self):
-        """Verifies peer search does not crash on tensor dimension mismatches."""
         query_sig = torch.randn(10)
         all_sigs = {
             0: query_sig,
@@ -86,7 +94,6 @@ class TestSimilaritySearchEngine:
         m_dim = 50
         k = 4
 
-        # Generate clustered signatures
         c1 = torch.randn(m_dim)
         c2 = torch.randn(m_dim)
         signatures = {}
@@ -95,7 +102,6 @@ class TestSimilaritySearchEngine:
         for i in range(15, 30):
             signatures[i] = c2 + 0.05 * torch.randn(m_dim)
 
-        # Build overlay
         zm = ZoneManager(max_zone_size=8, seed=42)
         zc = ZoneClustering(damping=0.7, r_replicas=3)
         son = SemanticOverlayNetwork(zone_manager=zm, clustering_engine=zc)
@@ -126,28 +132,73 @@ class TestSimilaritySearchEngine:
 
 
 class TestPullAggregator:
-    """Tests for row-stochastic softmax weights and collaborative anchor mixing."""
+    """Tests for row-stochastic softmax weights, alpha personalization, freshness guards, and multi-model support."""
 
-    def test_pull_weights_sum_to_one(self):
-        aggregator = PullAggregator(temperature=0.5)
-        sims = [0.8, 0.6, 0.4, 0.2]
+    def test_alpha_coupling_formula(self):
+        # psi=0 => alpha=0 (pure local)
+        assert compute_alpha_from_psi(psi=0.0, eta=1.0) == 0.0
+
+        # psi=2, eta=1 => alpha = 2/3
+        assert pytest.approx(compute_alpha_from_psi(psi=2.0, eta=1.0), abs=1e-4) == 2.0 / 3.0
+
+        # psi=100 => alpha approaches 1.0
+        assert pytest.approx(compute_alpha_from_psi(psi=100.0, eta=1.0), abs=1e-2) == 1.0
+
+        # Negative psi raises ValueError
+        with pytest.raises(ValueError):
+            compute_alpha_from_psi(psi=-1.0)
+
+    def test_data_plane_traffic_accounting(self):
+        # 1000 parameters * 4 bytes/float * 5 pulled models = 20000 bytes
+        traffic = compute_data_plane_traffic_bytes(num_pulled_models=5, num_params=1000)
+        assert traffic == 20000
+
+    @pytest.mark.parametrize("temperature", [0.1, 0.5, 1.0, 2.0])
+    def test_pull_weights_temperatures(self, temperature):
+        aggregator = PullAggregator(temperature=temperature)
+        sims = [0.9, 0.7, 0.4, 0.1]
         weights = aggregator.compute_pull_weights(sims)
 
         assert weights.shape == (4,)
         assert pytest.approx(weights.sum().item(), abs=1e-5) == 1.0
-        # Higher similarity must have strictly higher weight
         assert weights[0] > weights[1] > weights[2] > weights[3]
+
+        # Lower temperature produces sharper softmax distribution
+        if temperature == 0.1:
+            assert weights[0] > 0.8
+
+    def test_freshness_guard_filter(self):
+        agg = PullAggregator(t_fresh=0.7, max_staleness=2)
+        q_sig = torch.zeros(20)
+        q_sig[:10] = 1.0
+
+        fresh_sig = q_sig.clone()
+        drifted_sig = torch.zeros(20)
+        drifted_sig[10:] = 1.0
+
+        cand_sigs = {
+            1: fresh_sig,    # Same round (staleness 0) -> accept
+            2: fresh_sig,    # Delayed by 1 round (staleness 1 <= 2, sim 1.0 >= 0.7) -> accept
+            3: drifted_sig,  # Delayed by 1 round (staleness 1 <= 2, sim 0.0 < 0.7) -> reject
+            4: fresh_sig,    # Stale by 3 rounds (staleness 3 > 2) -> reject
+        }
+        cand_rounds = {1: 10, 2: 9, 3: 9, 4: 7}
+
+        accepted = agg.filter_fresh_replies(
+            query_signature=q_sig,
+            candidate_signatures=cand_sigs,
+            candidate_rounds=cand_rounds,
+            current_round=10,
+        )
+        assert accepted == {1, 2}
 
     def test_aggregation_and_anchor_mixing(self):
         aggregator = PullAggregator(temperature=1.0, default_alpha=0.5)
         
         client_w = torch.tensor([10.0, 10.0])
-        # Two identical neighbors with parameters [0, 0]
         neighbor_w = [torch.tensor([0.0, 0.0]), torch.tensor([0.0, 0.0])]
         similarities = [0.5, 0.5]
 
-        # Anchor should be [0.0, 0.0]
-        # w_new = 0.5 * [10, 10] + 0.5 * [0, 0] = [5.0, 5.0]
         w_new = aggregator.aggregate(
             client_weights=client_w,
             neighbor_weights=neighbor_w,
@@ -156,15 +207,63 @@ class TestPullAggregator:
         )
         assert torch.allclose(w_new, torch.tensor([5.0, 5.0]))
 
-    def test_aggregation_empty_neighbors_retains_client_state(self):
-        aggregator = PullAggregator()
-        client_w = torch.tensor([1.0, 2.0, 3.0])
-        w_new = aggregator.aggregate(
+    def test_aggregation_with_psi_coupling(self):
+        aggregator = PullAggregator(eta=1.0)
+        client_w = torch.tensor([10.0, 10.0])
+        neighbor_w = [torch.tensor([0.0, 0.0])]
+        similarities = [1.0]
+
+        # psi = 0 => alpha = 0 => w_new = client_w
+        w_pure_local = aggregator.aggregate(
             client_weights=client_w,
-            neighbor_weights=[],
-            similarities=[],
+            neighbor_weights=neighbor_w,
+            similarities=similarities,
+            psi=0.0,
         )
-        assert torch.allclose(w_new, client_w)
+        assert torch.allclose(w_pure_local, client_w)
+
+        # psi = 2.0 => alpha = 2/3 => w_new = 1/3 * 10 + 2/3 * 0 = 3.333
+        w_mixed = aggregator.aggregate(
+            client_weights=client_w,
+            neighbor_weights=neighbor_w,
+            similarities=similarities,
+            psi=2.0,
+        )
+        assert pytest.approx(w_mixed[0].item(), abs=1e-3) == 10.0 / 3.0
+
+    @pytest.mark.parametrize(
+        "model_cls, kwargs",
+        [
+            (FashionCNN, {"in_channels": 1, "num_classes": 10}),
+            (ResNet18Small, {"in_channels": 3, "num_classes": 10}),
+            (GoogleSpeechResNet, {"in_channels": 1, "num_classes": 35}),
+            (AlbertTextClassifier, {"vocab_size": 100, "embed_dim": 32, "num_heads": 2, "hidden_dim": 64, "num_layers": 1, "num_classes": 20, "max_seq_len": 32}),
+        ],
+    )
+    def test_aggregation_across_benchmark_models(self, model_cls, kwargs):
+        aggregator = PullAggregator(temperature=0.5, default_alpha=0.6)
+        
+        # Instantiate 3 peer models with same architecture
+        m1 = model_cls(**kwargs)
+        m2 = model_cls(**kwargs)
+        m3 = model_cls(**kwargs)
+
+        p1 = get_flattened_params(m1)
+        p2 = get_flattened_params(m2)
+        p3 = get_flattened_params(m3)
+
+        updated_p = aggregator.aggregate(
+            client_weights=p1,
+            neighbor_weights=[p2, p3],
+            similarities=[0.8, 0.6],
+        )
+
+        assert updated_p.shape == p1.shape
+        assert not torch.isnan(updated_p).any()
+        
+        # Verify unflattening into model succeeds
+        set_flattened_params(m1, updated_p)
+        assert torch.allclose(get_flattened_params(m1), updated_p)
 
 
 class TestFederatedCoordinatorIntegration:
@@ -179,7 +278,6 @@ class TestFederatedCoordinatorIntegration:
 
         clients = {}
         for i in range(num_clients):
-            # Synthetic binary classification dataset
             x = torch.randn(num_samples_per_client, input_dim)
             y = torch.randint(0, num_classes, (num_samples_per_client,))
             loader = DataLoader(TensorDataset(x, y), batch_size=8, shuffle=True)
@@ -210,7 +308,6 @@ class TestFederatedCoordinatorIntegration:
             son_refresh_interval=1,
         )
 
-        # Run 2 decentralized rounds
         res1 = coordinator.step_round(epochs_per_round=1)
         res2 = coordinator.step_round(epochs_per_round=1)
 
