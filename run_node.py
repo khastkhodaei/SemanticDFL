@@ -21,7 +21,14 @@ import torch.optim as optim
 import yaml
 
 from semantic_dfl.aggregation.pull_aggregator import PullAggregator
-from semantic_dfl.core.models import FashionCNN, MLP2NN, ResNet18Small
+from semantic_dfl.core.models import (
+    AlbertTextClassifier,
+    FashionCNN,
+    GoogleSpeechResNet,
+    MLP2NN,
+    ResNet18Small,
+    build_model,
+)
 from semantic_dfl.data.datasets import load_partitioned_dataset
 from semantic_dfl.data.partitioning import DirichletPartitioner, IIDPartitioner, PathologicalPartitioner
 from semantic_dfl.federated.client import DFLClient
@@ -138,11 +145,25 @@ def main():
     train_loader = client_loaders[client_id]
 
     # Initialize model
-    is_rgb = dataset_name.lower() in ("cifar10", "cifar-10")
-    if model_cfg.get("architecture", "FashionCNN") == "FashionCNN":
-        model = FashionCNN(in_channels=3 if is_rgb else 1, num_classes=10).to(device)
+    arch = model_cfg.get("architecture", "FashionCNN")
+    dname = dataset_name.lower()
+    is_rgb = dname in ("cifar10", "cifar-10", "tiny_imagenet", "tinyimagenet")
+    in_channels = 3 if is_rgb else 1
+
+    if arch in ("FashionCNN", "fashion_cnn", "CNN"):
+        model = FashionCNN(in_channels=in_channels, num_classes=10).to(device)
+    elif arch == "MLP2NN":
+        input_dim = 3072 if is_rgb else 784
+        model = MLP2NN(input_dim=input_dim, num_classes=10).to(device)
+    elif arch in ("ResNet18Small", "ResNet18", "resnet18_small"):
+        num_classes = 200 if dname in ("tiny_imagenet", "tinyimagenet") else 10
+        model = ResNet18Small(in_channels=in_channels, num_classes=num_classes).to(device)
+    elif arch in ("GoogleSpeechResNet", "SpeechResNet", "speech_resnet", "speech"):
+        model = GoogleSpeechResNet(in_channels=1, num_classes=35).to(device)
+    elif arch in ("AlbertTextClassifier", "Albert", "TextClassifier", "20newsgroups"):
+        model = AlbertTextClassifier(num_classes=20).to(device)
     else:
-        model = MLP2NN(input_dim=3072 if is_rgb else 784, num_classes=10).to(device)
+        model = build_model(model_name=arch, in_channels=in_channels).to(device)
 
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
     criterion = nn.CrossEntropyLoss()

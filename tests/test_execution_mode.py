@@ -3,10 +3,11 @@ Unit and Integration Tests for Unified Execution Modes and Transport Factory.
 
 Verifies:
 - Factory instantiation and dynamic routing for simulation vs distributed modes.
+- Multi-modal model factory in run_simulation.py across all 4 benchmark models.
 - Dynamic port allocation logic.
 - Exception handling for invalid transport configurations.
 - YAML configuration schema parsing for execution block.
-- Coordinator lifecycle management with factory-instantiated transports.
+- Coordinator lifecycle management and multi-modal round execution.
 """
 
 from __future__ import annotations
@@ -18,6 +19,14 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import yaml
 
+from run_simulation import create_model_factory
+from semantic_dfl.core.models import (
+    AlbertTextClassifier,
+    FashionCNN,
+    GoogleSpeechResNet,
+    MLP2NN,
+    ResNet18Small,
+)
 from semantic_dfl.federated.client import DFLClient
 from semantic_dfl.federated.coordinator import SemanticDFLCoordinator
 from semantic_dfl.overlay.son import SemanticOverlayNetwork
@@ -28,6 +37,7 @@ from semantic_dfl.transport import (
     MemoryTransport,
     create_transport,
 )
+from semantic_dfl.visualization.plotter import generate_all_plots
 
 
 class SimpleLinearModel(nn.Module):
@@ -134,6 +144,23 @@ def test_isolated_profiles_schema():
     assert len(slices_cfg["slices"]["super_peers"]) >= 2
 
 
+@pytest.mark.parametrize(
+    "arch, dataset, expected_cls",
+    [
+        ("FashionCNN", "fmnist", FashionCNN),
+        ("ResNet18Small", "cifar10", ResNet18Small),
+        ("ResNet18Small", "tiny_imagenet", ResNet18Small),
+        ("GoogleSpeechResNet", "speech", GoogleSpeechResNet),
+        ("AlbertTextClassifier", "20newsgroups", AlbertTextClassifier),
+        ("MLP2NN", "fmnist", MLP2NN),
+    ],
+)
+def test_create_model_factory_multimodal(arch, dataset, expected_cls):
+    factory = create_model_factory(arch, dataset)
+    model = factory()
+    assert isinstance(model, expected_cls)
+
+
 def test_coordinator_lifecycle_with_factory_transports(dummy_dataset):
     MemoryTransport.reset_global_state()
 
@@ -160,19 +187,17 @@ def test_coordinator_lifecycle_with_factory_transports(dummy_dataset):
         global_test_loader=dummy_dataset,
     )
 
-    # Test context manager and lifecycle methods
     with coordinator:
-        # Check that transports started
         for c in clients.values():
             assert c.transport.is_running is True
 
-        # Run 1 round
         metrics = coordinator.step_round(epochs_per_round=1)
         assert metrics["round"] == 1
         assert "avg_train_loss" in metrics
         assert "avg_test_accuracy" in metrics
         assert "avg_recall_at_k" in metrics
+        assert "traffic" in metrics
+        assert "role_distribution" in metrics
 
-    # Transports stopped upon exit
     for c in clients.values():
         assert c.transport.is_running is False

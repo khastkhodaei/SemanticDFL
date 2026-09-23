@@ -30,7 +30,15 @@ import torch.optim as optim
 import yaml
 
 from semantic_dfl.aggregation.pull_aggregator import PullAggregator
-from semantic_dfl.core.models import FashionCNN, MLP2NN, ResNet18Small
+from semantic_dfl.aggregation.pull_aggregator import PullAggregator
+from semantic_dfl.core.models import (
+    AlbertTextClassifier,
+    FashionCNN,
+    GoogleSpeechResNet,
+    MLP2NN,
+    ResNet18Small,
+    build_model,
+)
 from semantic_dfl.data.datasets import load_partitioned_dataset
 from semantic_dfl.data.partitioning import (
     DirichletPartitioner,
@@ -70,18 +78,24 @@ def set_seed(seed: int) -> None:
 def create_model_factory(architecture: str, dataset_name: str):
     """Returns a model constructor matching the specified architecture and dataset."""
     arch = architecture.strip()
-    is_rgb = dataset_name.lower() in ("cifar10", "cifar-10")
+    dname = dataset_name.lower()
+    is_rgb = dname in ("cifar10", "cifar-10", "tiny_imagenet", "tinyimagenet")
     in_channels = 3 if is_rgb else 1
 
-    if arch == "FashionCNN":
+    if arch in ("FashionCNN", "fashion_cnn", "CNN"):
         return lambda: FashionCNN(in_channels=in_channels, num_classes=10)
     elif arch == "MLP2NN":
         input_dim = 3072 if is_rgb else 784
         return lambda: MLP2NN(input_dim=input_dim, num_classes=10)
-    elif arch in ("ResNet18Small", "ResNet18"):
-        return lambda: ResNet18Small(in_channels=in_channels, num_classes=10)
+    elif arch in ("ResNet18Small", "ResNet18", "resnet18_small"):
+        num_classes = 200 if dname in ("tiny_imagenet", "tinyimagenet") else 10
+        return lambda: ResNet18Small(in_channels=in_channels, num_classes=num_classes)
+    elif arch in ("GoogleSpeechResNet", "SpeechResNet", "speech_resnet", "speech"):
+        return lambda: GoogleSpeechResNet(in_channels=1, num_classes=35)
+    elif arch in ("AlbertTextClassifier", "Albert", "TextClassifier", "20newsgroups"):
+        return lambda: AlbertTextClassifier(num_classes=20)
     else:
-        raise ValueError(f"Unsupported model architecture: {architecture}")
+        return lambda: build_model(model_name=arch, in_channels=in_channels)
 
 
 def setup_logger(output_dir: str, timestamp_str: str) -> tuple[logging.Logger, str]:
