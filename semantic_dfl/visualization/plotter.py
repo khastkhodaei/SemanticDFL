@@ -300,4 +300,12 @@ def generate_all_plots(
     p4 = os.path.join(output_dir, "time_breakdown.png")
     figures["time_breakdown"] = plot_time_breakdown(data, output_path=p4, export_pdf=export_pdf, dpi=dpi)
 
+    try:
+        from semantic_dfl.visualization.paper_plots import generate_paper_evaluation_plots
+        paper_figs = generate_paper_evaluation_plots(data, output_dir=output_dir, export_pdf=export_pdf, dpi=dpi)
+        figures.update(paper_figs)
+    except Exception:
+        pass
+
     return figures
+
