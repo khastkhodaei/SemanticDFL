@@ -286,8 +286,8 @@ pytest -v
 Expected output:
 ```
 ============================= test session starts =============================
-platform win32 -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
-rootdir: D:\Dev\SemanticDFL
+platform ... -- Python 3.10+ / 3.13+, pytest-9.x, pluggy-1.x
+rootdir: SemanticDFL
 collected 97 items
 
 tests/test_core_and_data.py ...........................                  [ 27%]
